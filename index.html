@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Работа и ЗП</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- ОБЯЗАТЕЛЬНЫЙ СКРИПТ ДЛЯ TELEGRAM -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    
+    <!-- Верхняя панель (заметки) -->
+    <header class="top-header">
+        <div class="notes-card">
+            <h3>ЗАМЕТКИ НА СЕГОДНЯ</h3>
+            <p id="today-note">Нет заметок</p>
+        </div>
+    </header>
+
+    <!-- Основной контент (Календарь) -->
+    <main id="content">
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button id="prev-month">&lt;</button>
+                <h2 id="month-year">Ноябрь 2026 г.</h2>
+                <button id="next-month">&gt;</button>
+            </div>
+            <div class="weekdays">
+                <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+            </div>
+            <div class="days" id="calendar-days">
+                <!-- Дни генерируются в JS -->
+            </div>
+        </div>
+        
+        <!-- Плавающая кнопка добавления -->
+        <button class="fab" id="add-shift-btn">✎</button>
+    </main>
+
+    <!-- Нижнее меню (Таб-бар) -->
+    <nav class="bottom-nav">
+        <button class="nav-btn active" data-tab="calendar">
+            <span class="icon">📅</span>
+            <span>Календарь</span>
+        </button>
+        <button class="nav-btn" data-tab="salary">
+            <span class="icon">💵</span>
+            <span>ЗП</span>
+        </button>
+        <button class="nav-btn" data-tab="shifts">
+            <span class="icon">📋</span>
+            <span>Мои смены</span>
+        </button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
