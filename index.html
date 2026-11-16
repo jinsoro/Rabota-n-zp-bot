@@ -11,6 +11,12 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
+  :root {
+    /* Эти переменные будут обновлены через JS, чтобы подстроиться под панель Telegram */
+    --tg-safe-top: 80px; 
+    --tg-safe-bottom: 20px;
+  }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   
   body {
@@ -21,18 +27,12 @@
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
     
-    /* Безопасные зоны для iPhone (Dynamic Island и полоска внизу) */
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+    /* Безопасные зоны */
+    padding-top: var(--tg-safe-top);
+    padding-bottom: var(--tg-safe-bottom);
   }
   
-  #page-calendar {
-    overflow: hidden !important;
-  }
-
-  .card { background: #1e293b; border-radius: 14px; padding: 12px; margin-bottom: 12px; overflow: hidden; }
-  .card-title { font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-
+  #page-calendar { overflow: hidden !important; }
   .page { 
     display: none; 
     flex: 1;
@@ -40,37 +40,27 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 12px;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    /* Отступ снизу, чтобы контент не залезал под таббар */
+    padding-bottom: calc(90px + var(--tg-safe-bottom));
+    pointer-events: auto;
   }
-  .page.active { 
-    display: flex; 
-    flex-direction: column;
-  }
+  .page.active { display: flex; flex-direction: column; }
+
+  .card { background: #1e293b; border-radius: 14px; padding: 12px; margin-bottom: 12px; overflow: hidden; pointer-events: auto; }
+  .card-title { font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
   /* Уведомление о незаполненной ЗП */
   .warning-banner {
-    background: #422006;
-    border: 1px solid #b45309;
-    color: #fde68a;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 13px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
+    background: #422006; border: 1px solid #b45309; color: #fde68a;
+    padding: 10px 14px; border-radius: 12px; font-size: 13px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between; cursor: pointer;
   }
   .warning-banner span { font-weight: 600; }
-  .warning-banner .arrow { font-size: 18px; }
 
   /* Блок Дохода */
   .income-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding: 0 4px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; padding: 0 4px;
   }
   .income-header .lbl { font-size: 14px; color: #94a3b8; font-weight: 500; }
   .income-header .val { font-size: 26px; font-weight: 700; color: #86efac; }
@@ -78,48 +68,26 @@
   /* Блок Заметки на сегодня */
   .today-notes-card {
     background: linear-gradient(135deg, #1e3a8a, #1e293b);
-    border: 1px solid #3b82f6;
-    border-radius: 14px;
-    padding: 12px;
-    margin-bottom: 12px;
-    min-height: 80px;
-    display: flex;
-    flex-direction: column;
+    border: 1px solid #3b82f6; border-radius: 14px; padding: 12px; margin-bottom: 12px;
+    min-height: 80px; display: flex; flex-direction: column; cursor: pointer;
   }
   .today-notes-card .title { font-size: 12px; color: #93c5fd; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
-  .today-notes-card .note-text {
-    font-size: 14px;
-    color: #e5e7eb;
-    white-space: pre-wrap;
-    line-height: 1.4;
-  }
+  .today-notes-card .note-text { font-size: 14px; color: #e5e7eb; white-space: pre-wrap; line-height: 1.4; }
   .today-notes-card .no-notes { color: #64748b; font-size: 13px; font-style: italic; }
 
   /* Календарь */
   .month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .month-nav button {
     background: #334155; border: none; color: #e5e7eb; font-size: 16px;
-    width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
-    -webkit-user-select: none; user-select: none;
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; user-select: none;
   }
   .month-title { font-weight: 600; font-size: 15px; }
   
   .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
   .dow { text-align: center; font-size: 10px; color: #94a3b8; padding: 2px 0; }
   
-  .calendar-wrapper {
-    position: relative;
-    width: 100%;
-    height: 396px;
-    overflow: hidden;
-  }
-  
-  #calendar {
-    width: 100%;
-    height: 100%;
-    align-content: start;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-  }
+  .calendar-wrapper { position: relative; width: 100%; height: 396px; overflow: hidden; }
+  #calendar { width: 100%; height: 100%; align-content: start; transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
   
   .slide-out-left { transform: translateX(-20%); opacity: 0; }
   .slide-out-right { transform: translateX(20%); opacity: 0; }
@@ -129,156 +97,69 @@
   .day {
     height: 64px; width: 100%; min-width: 0;
     display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
-    border-radius: 8px; background: #273449;
-    font-size: 11px; cursor: pointer; position: relative;
-    padding: 2px 2px 1px; overflow: hidden;
-    contain: layout style paint;
+    border-radius: 8px; background: #273449; font-size: 11px; cursor: pointer; position: relative;
+    padding: 2px 2px 1px; overflow: hidden; contain: layout style paint;
   }
   .day.other-month { opacity: 0.3; }
   .day.today { box-shadow: 0 0 0 2px #38bdf8 inset; }
   .day.tomorrow-highlight { box-shadow: 0 0 0 2px #f59e0b inset; }
-  .day .num {
-    line-height: 1; font-weight: 600; font-size: 12px;
-    color: #e5e7eb; text-align: center; margin-bottom: 1px; flex-shrink: 0;
-  }
+  .day .num { line-height: 1; font-weight: 600; font-size: 12px; color: #e5e7eb; text-align: center; margin-bottom: 1px; flex-shrink: 0; }
   .day.has-shift .num { color: #fff; }
   
-  .day .warning-badge {
-    position: absolute; top: 2px; right: 2px;
-    width: 5px; height: 5px; border-radius: 50%;
-    background: #fbbf24; box-shadow: 0 0 4px #fbbf24;
-  }
-
-  .day .labels {
-    display: flex; flex-direction: column; gap: 1px;
-    flex: 1; justify-content: flex-start; overflow: hidden;
-    padding-bottom: 12px; 
-  }
-  .day .lbl {
-    font-size: 8px; line-height: 1.1; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.3px;
-    color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.5);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    text-align: center;
-  }
-  
-  .day .note-icon {
-    position: absolute;
-    top: 50%;
-    left: 0; right: 0;
-    transform: translateY(-50%);
-    text-align: center;
-    opacity: 0.9;
-    z-index: 1;
-    pointer-events: none;
-    display: flex;
-    justify-content: center;
-  }
-  
+  .day .warning-badge { position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 4px #fbbf24; }
+  .day .labels { display: flex; flex-direction: column; gap: 1px; flex: 1; justify-content: flex-start; overflow: hidden; padding-bottom: 12px; }
+  .day .lbl { font-size: 8px; line-height: 1.1; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+  .day .note-icon { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); text-align: center; opacity: 0.9; z-index: 1; pointer-events: none; display: flex; justify-content: center; }
   .day .note-icon svg { width: 10px; height: 10px; fill: #fff; }
-  
-  .day .sum {
-    font-size: 9px; line-height: 1.1; color: #fff; font-weight: 600;
-    text-align: center; text-shadow: 0 1px 1px rgba(0,0,0,0.5);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    flex-shrink: 0;
-    position: absolute;
-    bottom: 1px;
-    left: 0; right: 0;
-  }
-
-  /* Блок Итог за месяц (под календарем) */
-  .month-summary-card {
-    background: #1e293b;
-    border-radius: 14px;
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: auto;
-    margin-bottom: 8px;
-  }
-  .month-summary-card .label { font-size: 14px; color: #94a3b8; }
-  .month-summary-card .value { font-size: 24px; font-weight: 700; color: #86efac; text-align: right; }
-  .month-summary-card .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .day .sum { font-size: 9px; line-height: 1.1; color: #fff; font-weight: 600; text-align: center; text-shadow: 0 1px 1px rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; position: absolute; bottom: 1px; left: 0; right: 0; }
 
   /* Плавающая кнопка */
   .fab-place-btn {
-    position: fixed;
-    right: 16px;
-    bottom: calc(80px + env(safe-area-inset-bottom));
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: #334155;
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    cursor: pointer;
-    z-index: 14;
-    display: none; 
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, transform 0.1s;
+    position: fixed; right: 16px; bottom: calc(80px + var(--tg-safe-bottom));
+    width: 56px; height: 56px; border-radius: 50%; background: #334155; color: #fff;
+    border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer; z-index: 20;
+    display: none; align-items: center; justify-content: center; transition: background 0.2s, transform 0.1s;
   }
   .fab-place-btn.show { display: flex; }
   .fab-place-btn.active { background: #22c55e; color: #052e16; }
   .fab-place-btn:active { transform: scale(0.95); }
-  
   .fab-place-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
   .place-mode-hint {
-    position: fixed;
-    left: 16px;
-    right: 80px;
-    bottom: calc(80px + env(safe-area-inset-bottom));
-    font-size: 11px;
-    color: #86efac;
-    text-align: center;
-    padding: 8px;
-    background: #14532d;
-    border-radius: 8px;
-    z-index: 14;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    position: fixed; left: 16px; right: 80px; bottom: calc(80px + var(--tg-safe-bottom));
+    font-size: 11px; color: #86efac; text-align: center; padding: 8px; background: #14532d;
+    border-radius: 8px; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   }
   .place-mode-hint.hidden { display: none; }
 
-  .place-picker {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none;
-    align-items: flex-end; z-index: 20;
+  /* Модальные окна */
+  .place-picker, .modal-bg, .archive-modal, .backup-overlay, .sync-confirm-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: flex-end; z-index: 30;
   }
-  .place-picker.open { display: flex; }
-  .place-picker .inner {
+  .place-picker.open, .modal-bg.open, .archive-modal.open, .backup-overlay.open, .sync-confirm-overlay.open { display: flex; }
+  
+  .backup-overlay, .sync-confirm-overlay { align-items: center; justify-content: center; padding: 20px; }
+  
+  .place-picker .inner, .modal, .archive-modal .inner {
     background: #1e293b; width: 100%; border-radius: 18px 18px 0 0; padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    max-height: 70vh; overflow-y: auto;
+    padding-bottom: calc(16px + var(--tg-safe-bottom)); max-height: 90vh; overflow-y: auto;
   }
-  .place-picker h2 { font-size: 16px; margin: 0 0 12px; }
+  .backup-modal, .sync-confirm-modal {
+    background: #1e293b; width: 100%; max-width: 340px; border-radius: 16px; padding: 20px; text-align: center;
+  }
 
-  /* Страница ЗП */
+  /* Страница ЗП и прочее */
   .salary-month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .salary-month-nav button {
-    background: #334155; border: none; color: #e5e7eb; font-size: 18px;
-    width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
-    -webkit-user-select: none; user-select: none;
-  }
+  .salary-month-nav button { background: #334155; border: none; color: #e5e7eb; font-size: 18px; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; }
   .salary-month-nav .title { font-weight: 600; font-size: 16px; }
-
   .total-big { text-align: center; padding: 16px 0 8px; }
   .total-big .lbl { font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
   .total-big .val { font-size: 32px; font-weight: 700; color: #86efac; }
-  
-  .stats-row {
-    display: flex; justify-content: center; gap: 16px; margin-top: 4px; margin-bottom: 8px;
-    font-size: 12px; color: #94a3b8;
-  }
+  .stats-row { display: flex; justify-content: center; gap: 16px; margin-top: 4px; margin-bottom: 8px; font-size: 12px; color: #94a3b8; }
   .stats-row span b { color: #e5e7eb; }
 
   .shops { font-size: 13px; color: #cbd5e1; margin-top: 6px; border-top: 1px solid #334155; padding-top: 8px; }
-  .shops .shop-line {
-    display: flex; align-items: center; gap: 8px; justify-content: space-between;
-    padding: 8px 0; border-bottom: 1px solid #1e293b;
-  }
+  .shops .shop-line { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; }
   .shops .shop-line:last-child { border-bottom: none; }
   .shops .left { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .shops .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -287,354 +168,112 @@
   .shops .shop-count { font-size: 11px; color: #94a3b8; margin-top: 2px; }
   .shops .sum { color: #86efac; font-weight: 600; white-space: nowrap; }
 
-  /* График */
-  .chart-container {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    height: 120px;
-    margin-top: 16px;
-    padding-bottom: 24px;
-    position: relative;
-    border-bottom: 1px solid #334155;
-  }
-  .chart-bar-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    height: 100%;
-    position: relative;
-    cursor: pointer;
-  }
-  .chart-bar {
-    width: 60%;
-    max-width: 40px;
-    background: #3b82f6;
-    border-radius: 4px 4px 0 0;
-    transition: height 0.3s ease-out, background 0.2s;
-    min-height: 2px;
-    opacity: 0.8;
-  }
+  .chart-container { display: flex; align-items: flex-end; justify-content: space-between; height: 120px; margin-top: 16px; padding-bottom: 24px; position: relative; border-bottom: 1px solid #334155; }
+  .chart-bar-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; cursor: pointer; }
+  .chart-bar { width: 60%; max-width: 40px; background: #3b82f6; border-radius: 4px 4px 0 0; transition: height 0.3s ease-out, background 0.2s; min-height: 2px; opacity: 0.8; }
   .chart-bar.zero { background: #334155; opacity: 1; }
-  
-  /* Выделение выбранного столбца */
-  .chart-bar-wrapper.selected .chart-bar {
-    background: #22c55e;
-    opacity: 1;
-    box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
-  }
-  .chart-bar-wrapper.selected .chart-value {
-    color: #22c55e;
-    font-weight: 700;
-  }
-
-  .chart-value {
-    font-size: 10px;
-    color: #e5e7eb;
-    position: absolute;
-    top: -16px;
-    white-space: nowrap;
-  }
-  .chart-label {
-    position: absolute;
-    bottom: -22px;
-    font-size: 10px;
-    color: #94a3b8;
-    text-transform: uppercase;
-  }
+  .chart-bar-wrapper.selected .chart-bar { background: #22c55e; opacity: 1; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+  .chart-bar-wrapper.selected .chart-value { color: #22c55e; font-weight: 700; }
+  .chart-value { font-size: 10px; color: #e5e7eb; position: absolute; top: -16px; white-space: nowrap; }
+  .chart-label { position: absolute; bottom: -22px; font-size: 10px; color: #94a3b8; text-transform: uppercase; }
 
   .past-months { display: flex; flex-direction: column; gap: 6px; }
-  .past-month-row {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #0f172a; border: 1px solid #334155; border-radius: 10px;
-    padding: 12px 14px; font-size: 14px; cursor: pointer;
-  }
+  .past-month-row { display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; font-size: 14px; cursor: pointer; }
   .past-month-row .name { color: #cbd5e1; }
   .past-month-row .sum { color: #86efac; font-weight: 600; }
-
-  .show-all-btn {
-    background: none; border: none; color: #38bdf8; font-size: 14px;
-    padding: 10px 0 0; cursor: pointer; text-align: center; width: 100%;
-  }
-
-  /* Анимация смены месяца на ЗП */
-  .salary-content-wrapper {
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-  }
-  .slide-out-left { transform: translateX(-20%); opacity: 0; }
-  .slide-out-right { transform: translateX(20%); opacity: 0; }
-  .slide-in-left { transform: translateX(-20%); opacity: 0; }
-  .slide-in-right { transform: translateX(20%); opacity: 0; }
+  .show-all-btn { background: none; border: none; color: #38bdf8; font-size: 14px; padding: 10px 0 0; cursor: pointer; text-align: center; width: 100%; }
 
   /* Шаблоны */
   .template-list { display: flex; flex-direction: column; gap: 6px; position: relative; }
-  
-  .swipe-container {
-    position: relative;
-    overflow: hidden;
-    border-radius: 10px;
-  }
-  
-  .swipe-content {
-    background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: transform 0.2s ease-out;
-    position: relative;
-    z-index: 2;
-    touch-action: pan-y;
-  }
-  
+  .swipe-container { position: relative; overflow: hidden; border-radius: 10px; }
+  .swipe-content { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px 12px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s ease-out; position: relative; z-index: 2; touch-action: pan-y; }
   .swipe-content.swiping { transition: none; }
-
-  .swipe-action {
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 100px;
-    background: #ef4444;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: 0 10px 10px 0;
-    cursor: pointer;
-    z-index: 1;
-  }
-
-  .template-item-content {
-    display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
-  }
+  .swipe-action { position: absolute; top: 0; right: 0; bottom: 0; width: 100px; background: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; border-radius: 0 10px 10px 0; cursor: pointer; z-index: 1; }
+  .template-item-content { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
   .template-item-content .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
   .template-item-content .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .template-item-content .default-hours { font-size: 11px; color: #94a3b8; margin-left: 6px; white-space: nowrap; }
-  
-  .template-edit-hint {
-    font-size: 18px; color: #64748b; padding-left: 10px;
-  }
+  .template-edit-hint { font-size: 18px; color: #64748b; padding-left: 10px; }
 
-  .template-buttons {
-    display: flex; gap: 8px; margin-top: 12px;
-  }
-  .show-add-btn {
-    flex: 1; background: #22c55e; color: #052e16; border: none; border-radius: 12px;
-    padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer;
-  }
-  .show-archive-btn {
-    flex: 1; background: #334155; color: #e5e7eb; border: none; border-radius: 12px;
-    padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer;
-  }
-  .show-archive-btn:active { background: #475569; }
+  .template-buttons { display: flex; gap: 8px; margin-top: 12px; }
+  .show-add-btn { flex: 1; background: #22c55e; color: #052e16; border: none; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .show-archive-btn { flex: 1; background: #334155; color: #e5e7eb; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
-  .add-template {
-    display: none;
-    flex-direction: column; gap: 8px; margin-top: 12px;
-    padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 12px;
-  }
+  .add-template { display: none; flex-direction: column; gap: 8px; margin-top: 12px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; }
   .add-template.open { display: flex; }
-  .add-template input {
-    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155;
-    background: #1e293b; color: #e5e7eb; font-size: 16px;
-  }
-  .add-template .hours-input {
-    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155;
-    background: #1e293b; color: #e5e7eb; font-size: 16px;
-  }
+  .add-template input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: #e5e7eb; font-size: 16px; }
+  .add-template .hours-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: #e5e7eb; font-size: 16px; }
   .color-row { display: flex; align-items: center; gap: 8px; }
   .color-row .clabel { font-size: 12px; color: #94a3b8; }
   .colors { display: flex; gap: 8px; flex-wrap: wrap; }
-  .color-swatch {
-    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-    border: 2px solid transparent;
-  }
+  .color-swatch { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
   .color-swatch.selected { border-color: #ffffff; }
-  .add-btn {
-    background: #22c55e; color: #052e16; border: none; border-radius: 10px;
-    padding: 12px; font-size: 16px; font-weight: 700; cursor: pointer;
-  }
-  .cancel-add-btn {
-    background: #334155; color: #e5e7eb; border: none; border-radius: 10px;
-    padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
-  }
+  .add-btn { background: #22c55e; color: #052e16; border: none; border-radius: 10px; padding: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .cancel-add-btn { background: #334155; color: #e5e7eb; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
-  /* Модалка Архива */
-  .archive-modal {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none;
-    align-items: flex-end; z-index: 20;
-  }
-  .archive-modal.open { display: flex; }
-  .archive-modal .inner {
-    background: #1e293b; width: 100%; border-radius: 18px 18px 0 0; padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    max-height: 80vh; overflow-y: auto;
-  }
-  .archive-modal h2 { font-size: 16px; margin: 0 0 12px; }
-  
   .archive-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .archive-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #0f172a; border: 1px solid #334155; border-radius: 10px;
-    padding: 12px; font-size: 14px;
-  }
+  .archive-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; font-size: 14px; }
   .archive-item .left { display: flex; align-items: center; gap: 10px; flex: 1; }
   .archive-item .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   .archive-item .name { color: #94a3b8; text-decoration: line-through; }
-  .archive-item .restore-btn {
-    background: #334155; color: #e5e7eb; border: none; border-radius: 8px;
-    padding: 8px 12px; font-size: 13px; cursor: pointer;
-  }
+  .archive-item .restore-btn { background: #334155; color: #e5e7eb; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
 
-  /* Модалка дня */
-  .modal-bg {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none;
-    align-items: flex-end; z-index: 20;
-  }
-  .modal-bg.open { display: flex; }
-  .modal {
-    background: #1e293b; width: 100%; border-radius: 18px 18px 0 0; padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    max-height: 90vh; overflow-y: auto;
-  }
-  .modal h2 { font-size: 16px; margin: 0 0 8px; }
-  
-  .day-note-block {
-    margin-bottom: 16px; background: #0f172a; border-radius: 12px; padding: 10px 12px;
-    border: 1px solid #334155;
-  }
-  .day-note-block label {
-    display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase;
-    margin-bottom: 6px; font-weight: 600;
-  }
-  .day-note-block textarea {
-    width: 100%; min-height: 40px; padding: 8px 10px; border-radius: 8px;
-    border: 1px solid #334155; background: #1e293b; color: #e5e7eb;
-    font-size: 15px; font-family: inherit; resize: vertical;
-  }
+  .day-note-block { margin-bottom: 16px; background: #0f172a; border-radius: 12px; padding: 10px 12px; border: 1px solid #334155; }
+  .day-note-block label { display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+  .day-note-block textarea { width: 100%; min-height: 40px; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e5e7eb; font-size: 15px; font-family: inherit; resize: vertical; }
 
   .pick-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-  .pick-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #0f172a; border: 1px solid #334155; border-radius: 12px;
-    padding: 14px 16px; font-size: 16px; cursor: pointer;
-  }
+  .pick-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; font-size: 16px; cursor: pointer; }
   .pick-item:active { background: #1e3a8a; }
   .pick-item .left { display: flex; align-items: center; gap: 10px; }
   .pick-item .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
   .pick-item .add { color: #38bdf8; font-size: 22px; font-weight: 300; }
 
-  .shift-row {
-    background: #0f172a; border: 1px solid #334155; border-radius: 12px;
-    padding: 10px 12px; margin-bottom: 8px;
-    border-left: 4px solid #334155;
-  }
+  .shift-row { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; border-left: 4px solid #334155; }
   .shift-row .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .shift-row .top .left { display: flex; align-items: center; gap: 8px; }
   .shift-row .top .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   .shift-row .name { font-weight: 600; font-size: 15px; }
   .shift-row .del { color: #f87171; font-size: 20px; background: none; border: none; cursor: pointer; padding: 0 4px; }
-  
   .shift-row .fields { display: flex; gap: 8px; }
   .shift-row .field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   .shift-row .field label { font-size: 10px; color: #94a3b8; padding-left: 2px; text-transform: uppercase; }
-  .shift-row .field input {
-    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155;
-    background: #1e293b; color: #86efac; font-size: 16px; font-weight: 600;
-  }
+  .shift-row .field input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #86efac; font-size: 16px; font-weight: 600; }
   .shift-row .field.hours input { color: #e5e7eb; }
   
-  .btn {
-    padding: 14px; border-radius: 12px; border: none; font-size: 15px;
-    font-weight: 600; cursor: pointer; width: 100%;
-  }
+  .btn { padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; }
   .btn-cancel { background: #334155; color: #e5e7eb; }
   .btn-export { background: #1d4ed8; color: #dbeafe; margin-top: 16px; }
   .btn-import { background: #0f766e; color: #ccfbf1; margin-top: 8px; }
-
   .empty-hint { color: #64748b; font-size: 14px; padding: 4px 0; }
 
   /* Нижняя навигация */
   .tabbar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
     background: #0f172a; border-top: 1px solid #1e293b;
     display: flex; padding: 6px 8px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    /* Привязываем к безопасной зоне снизу */
+    padding-bottom: calc(6px + var(--tg-safe-bottom));
     gap: 6px;
   }
   .tabbar button {
     flex: 1; background: none; border: 1px solid transparent; color: #64748b; cursor: pointer;
     padding: 8px 0 6px; font-family: inherit;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px;
-    -webkit-user-select: none; user-select: none;
     border-radius: 12px; transition: all 0.2s;
   }
-  .tabbar button .ico {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 24px;
-  }
+  .tabbar button .ico { display: flex; align-items: center; justify-content: center; height: 24px; }
   .tabbar button .ico svg { width: 22px; height: 22px; fill: currentColor; }
-  .tabbar button span:last-child {
-    font-size: 10px;
-    line-height: 1.2;
-    height: 12px;      
-  }
-  .tabbar button.active {
-    color: #38bdf8; 
-    background: rgba(56, 189, 248, 0.1);
-    border: 1px solid #38bdf8;
-  }
+  .tabbar button span:last-child { font-size: 10px; line-height: 1.2; height: 12px; }
+  .tabbar button.active { color: #38bdf8; background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; }
 
-  /* Напоминание о бэкапе */
-  .backup-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
-    align-items: center; justify-content: center; z-index: 30; padding: 20px;
-  }
-  .backup-overlay.open { display: flex; }
-  .backup-modal {
-    background: #1e293b; width: 100%; max-width: 340px; border-radius: 16px;
-    padding: 20px; text-align: center;
-  }
-  .backup-modal .icon { margin-bottom: 10px; display: flex; justify-content: center; }
-  .backup-modal .icon svg { width: 48px; height: 48px; fill: #94a3b8; }
-  .backup-modal h2 { font-size: 18px; margin: 0 0 10px; color: #e5e7eb; }
-  .backup-modal p { font-size: 14px; color: #94a3b8; margin: 0 0 20px; line-height: 1.4; }
-  .backup-modal .btn-primary { background: #22c55e; color: #052e16; margin-bottom: 8px; }
-  .backup-modal .btn-secondary { background: #334155; color: #e5e7eb; }
+  .backup-modal h2, .sync-confirm-modal h2 { font-size: 18px; margin: 0 0 10px; color: #e5e7eb; }
+  .backup-modal p, .sync-confirm-modal p { font-size: 14px; color: #94a3b8; margin: 0 0 20px; line-height: 1.4; }
+  .backup-modal .btn-primary, .sync-confirm-modal .btn-primary { background: #22c55e; color: #052e16; margin-bottom: 8px; }
+  .backup-modal .btn-secondary, .sync-confirm-modal .btn-secondary { background: #334155; color: #e5e7eb; }
 
-  /* Окно синхронизации */
-  .sync-confirm-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
-    align-items: center; justify-content: center; z-index: 30; padding: 20px;
-  }
-  .sync-confirm-overlay.open { display: flex; }
-  .sync-confirm-modal {
-    background: #1e293b; width: 100%; max-width: 340px; border-radius: 16px;
-    padding: 20px; text-align: center;
-  }
-  .sync-confirm-modal h2 { font-size: 18px; margin: 0 0 10px; color: #e5e7eb; }
-  .sync-confirm-modal p { font-size: 14px; color: #94a3b8; margin: 0 0 20px; line-height: 1.4; }
-  .sync-confirm-modal .btn-primary { background: #22c55e; color: #052e16; margin-bottom: 8px; }
-  .sync-confirm-modal .btn-secondary { background: #334155; color: #e5e7eb; }
-
-  /* Список незаполненных смен */
-  .missing-list {
-    display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;
-    max-height: 60vh; overflow-y: auto;
-  }
-  .missing-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #0f172a; border: 1px solid #334155; border-radius: 10px;
-    padding: 12px; cursor: pointer;
-  }
+  .missing-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-height: 60vh; overflow-y: auto; }
+  .missing-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; }
   .missing-item .date { font-weight: 600; color: #e5e7eb; }
   .missing-item .shop { font-size: 12px; color: #94a3b8; margin-top: 2px; }
   .missing-item .arrow { color: #38bdf8; font-size: 18px; }
@@ -644,7 +283,6 @@
 
 <!-- ========== СТРАНИЦА 1: КАЛЕНДАРЬ ========== -->
 <div class="page active" id="page-calendar">
-
   <div class="income-header">
     <div class="lbl">Доход за месяц</div>
     <div class="val" id="headerMonthTotal">0 ₽</div>
@@ -661,15 +299,11 @@
       <span class="month-title" id="monthTitle"></span>
       <button onclick="changeMonth(1)">›</button>
     </div>
-
     <div class="grid" id="dowRow"></div>
-    
     <div class="calendar-wrapper">
       <div class="grid" id="calendar" style="margin-top:4px;"></div>
     </div>
-
   </div>
-
 </div>
 
 <!-- Плавающая кнопка выставления смены -->
@@ -680,7 +314,6 @@
 
 <!-- ========== СТРАНИЦА 2: ЗП ========== -->
 <div class="page" id="page-salary">
-
   <div class="warning-banner" id="salaryWarningBanner" onclick="openMissingList()" style="display: none;">
     <div>У вас есть <span id="missingCount">0</span> смен без указанной ЗП</div>
     <div class="arrow">›</div>
@@ -693,19 +326,15 @@
         <span class="title" id="salaryMonthTitle"></span>
         <button onclick="changeSalaryMonth(1)">›</button>
       </div>
-
       <div class="total-big">
         <div class="lbl">Доход за месяц</div>
         <div class="val" id="salaryTotal">0 ₽</div>
       </div>
-      
       <div class="stats-row" id="salaryStats"></div>
-
       <div class="card-title" style="margin-top:8px;">По объектам</div>
       <div class="shops" id="salaryBreakdown"></div>
     </div>
 
-    <!-- График -->
     <div class="card">
       <div class="card-title">Динамика за 6 месяцев</div>
       <div class="chart-container" id="chartContainer"></div>
@@ -717,16 +346,13 @@
       <button class="show-all-btn" id="showAllMonthsBtn" style="display:none" onclick="toggleAllMonths()">Показать все ↓</button>
     </div>
   </div>
-
 </div>
 
 <!-- ========== СТРАНИЦА 3: МОИ СМЕНЫ ========== -->
 <div class="page" id="page-templates">
-
   <div class="card">
     <div class="card-title">Мои смены (для календаря)</div>
     <div class="template-list" id="templateList"></div>
-
     <div class="template-buttons">
       <button class="show-add-btn" id="showAddBtn" onclick="showAddForm()">+ Добавить</button>
       <button class="show-archive-btn" onclick="openArchive()">Архив</button>
@@ -735,9 +361,7 @@
     <div class="add-template" id="addTemplateForm">
       <input type="hidden" id="editingTemplateId" value="">
       <input id="newTemplateName" placeholder="Название (объект/место)">
-      
       <input id="newTemplateHours" class="hours-input" type="number" inputmode="decimal" placeholder="Часы по умолчанию (необязательно)">
-      
       <div class="color-row">
         <span class="clabel">Цвет:</span>
         <div class="colors" id="newColors"></div>
@@ -756,27 +380,20 @@
     <button class="btn btn-import" onclick="document.getElementById('importFile').click()">📤 Импорт данных</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
-
 </div>
 
 <!-- ========== НИЖНЯЯ НАВИГАЦИЯ ========== -->
 <div class="tabbar">
   <button id="tab-calendar" class="active" onclick="switchTab('calendar')">
-    <span class="ico">
-      <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
-    </span>
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg></span>
     <span>Календарь</span>
   </button>
   <button id="tab-salary" onclick="switchTab('salary')">
-    <span class="ico">
-      <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-    </span>
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></span>
     <span>ЗП</span>
   </button>
   <button id="tab-templates" onclick="switchTab('templates')">
-    <span class="ico">
-      <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-    </span>
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></span>
     <span>Мои смены</span>
   </button>
 </div>
@@ -803,17 +420,13 @@
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h2 id="modalTitle">Смена</h2>
-    
     <div class="day-note-block">
       <label>Заметка на день</label>
       <textarea id="dayNoteInput" placeholder="Например: выходной, отвезти документы..." onchange="setDayNote(this.value)"></textarea>
     </div>
-
     <div id="dayShiftsBlock"></div>
-
     <div class="card-title" style="margin-top:14px;">Добавить смену</div>
     <div class="pick-list" id="pickList"></div>
-
     <button class="btn btn-cancel" onclick="closeModal()">Закрыть</button>
   </div>
 </div>
@@ -830,9 +443,6 @@
 <!-- Напоминание о бэкапе -->
 <div class="backup-overlay" id="backupOverlay">
   <div class="backup-modal">
-    <div class="icon">
-      <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
-    </div>
     <h2>Новый месяц!</h2>
     <p>Начался новый месяц. Рекомендуем сделать резервную копию данных, чтобы ничего не потерять.</p>
     <button class="btn btn-primary" onclick="backupFromReminder()">📥 Скачать копию</button>
@@ -851,38 +461,38 @@
 </div>
 
 <script>
-// ==========================================
-// ИНИЦИАЛИЗАЦИЯ TELEGRAM WEB APP
-// ==========================================
+// 1. Инициализация Telegram Web App
 const tg = window.Telegram?.WebApp;
 
 if (tg) {
   tg.ready();
   tg.expand();
-  // Запрашиваем полноэкранный режим (если версия Telegram позволяет)
-  if (tg.requestFullscreen) {
-    tg.requestFullscreen();
-  }
-  // Отключаем свайп-закрытие вниз (чтобы не мешал работе с календарем)
-  if (tg.disableVerticalSwipes) {
-    tg.disableVerticalSwipes();
-  }
+  if (tg.requestFullscreen) { tg.requestFullscreen(); }
+  if (tg.disableVerticalSwipes) { tg.disableVerticalSwipes(); }
+  
+  // ВАЖНО: Считываем безопасные зоны из Telegram и применяем их в CSS
+  const safeArea = tg.safeAreaInset;
+  const contentSafeArea = tg.contentSafeAreaInset;
+  
+  // Верхний отступ (остров камеры + кнопка "Закрыть")
+  document.documentElement.style.setProperty('--tg-safe-top', `${(safeArea?.top || 0) + (contentSafeArea?.top || 0) + 8}px`);
+  // Нижний отступ (полоска "Домой")
+  document.documentElement.style.setProperty('--tg-safe-bottom', `${(safeArea?.bottom || 0) + 10}px`);
+  
+  // Принудительно задаем цвета шапки Telegram под цвет фона приложения
+  tg.setHeaderColor('#0f172a');
+  tg.setBackgroundColor('#0f172a');
 }
 
-// ==========================================
-// ОБЕРТКА ДЛЯ ХРАНИЛИЩА (LOCALSTORAGE + CLOUDSTORAGE)
-// ==========================================
+// 2. Обертка для хранилища (LocalStorage + CloudStorage)
 const Storage = {
   async get(key) {
     const local = localStorage.getItem(key);
     if (tg && tg.CloudStorage) {
       return new Promise((resolve) => {
         tg.CloudStorage.getItem(key, (err, remote) => {
-          if (!err && remote) {
-            resolve(remote);
-          } else {
-            resolve(local);
-          }
+          if (!err && remote) { resolve(remote); } 
+          else { resolve(local); }
         });
       });
     }
@@ -896,9 +506,7 @@ const Storage = {
   }
 };
 
-// ==========================================
-// ОСНОВНОЙ КОД ПРИЛОЖЕНИЯ
-// ==========================================
+// Константы
 const STORE_KEY = 'shifts_v4';
 const TEMPLATES_KEY = 'templates_v4';
 const DAY_NOTES_KEY = 'day_notes_v4';
@@ -907,26 +515,22 @@ const MONTHS = ['январь','февраль','март','апрель','ма�
 const SHORT_MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#ec4899'];
 
+// Переменные
 let templates = [];
 let shifts = {};
 let dayNotes = {};
-
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
-
 let selectedDate = null;
 let newColor = COLORS[0];
-
 let placeMode = false;
 let placeTemplate = null;
-
 let salaryYear = new Date().getFullYear();
 let salaryMonth = new Date().getMonth();
 let showAllPastMonths = false;
-
 let pendingSyncTemplateId = null;
 
-// Функция асинхронной загрузки данных из облака при старте
+// Запуск приложения
 async function initApp() {
   const t = await Storage.get(TEMPLATES_KEY);
   const s = await Storage.get(STORE_KEY);
@@ -945,15 +549,8 @@ async function initApp() {
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function dateKey(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
-function todayKey(){
-  const t = new Date();
-  return dateKey(t.getFullYear(), t.getMonth(), t.getDate());
-}
-function tomorrowKey(){
-  const t = new Date();
-  t.setDate(t.getDate()+1);
-  return dateKey(t.getFullYear(), t.getMonth(), t.getDate());
-}
+function todayKey(){ const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
+function tomorrowKey(){ const t = new Date(); t.setDate(t.getDate()+1); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
 
 function switchTab(tab){
   document.getElementById('page-calendar').classList.toggle('active', tab==='calendar');
@@ -966,29 +563,20 @@ function switchTab(tab){
   
   if (tab==='calendar'){ renderCalendar(); }
   else if (tab==='salary'){ 
-    // При переходе на ЗП, подтягиваем актуальные данные
-    Storage.get(STORE_KEY).then(s => {
-      shifts = s ? JSON.parse(s) : {};
-      renderSalaryPage();
-    });
+    Storage.get(STORE_KEY).then(s => { shifts = s ? JSON.parse(s) : {}; renderSalaryPage(); });
   }
   else { renderTemplates(); }
   
   const fab = document.getElementById('placeBtn');
-  if (tab === 'calendar') {
-    fab.classList.add('show');
-  } else {
-    fab.classList.remove('show');
-    if (placeMode) exitPlaceMode();
-  }
+  if (tab === 'calendar') { fab.classList.add('show'); } 
+  else { fab.classList.remove('show'); if (placeMode) exitPlaceMode(); }
 
   const activePage = document.querySelector('.page.active');
   if (activePage) activePage.scrollTop = 0;
 }
 
-/* ---------- Свайпы и анимация календаря ---------- */
-let touchStartX = 0;
-let touchStartY = 0;
+// Свайпы и анимация
+let touchStartX = 0, touchStartY = 0;
 const calendarEl = document.getElementById('calendar');
 
 document.getElementById('calendarCard').addEventListener('touchstart', e => {
@@ -997,26 +585,19 @@ document.getElementById('calendarCard').addEventListener('touchstart', e => {
 }, {passive: true});
 
 document.getElementById('calendarCard').addEventListener('touchend', e => {
-  const touchEndX = e.changedTouches[0].screenX;
-  const touchEndY = e.changedTouches[0].screenY;
-  
-  const diffX = touchEndX - touchStartX;
-  const diffY = touchEndY - touchStartY;
-
+  const diffX = e.changedTouches[0].screenX - touchStartX;
+  const diffY = e.changedTouches[0].screenY - touchStartY;
   if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-    if (diffX > 0) { animateMonthChange(-1); } 
-    else { animateMonthChange(1); }
+    if (diffX > 0) { animateMonthChange(-1); } else { animateMonthChange(1); }
   }
 }, {passive: true});
 
 function animateMonthChange(direction) {
   calendarEl.classList.add(direction > 0 ? 'slide-out-left' : 'slide-out-right');
-  
   setTimeout(() => {
     changeMonth(direction, false); 
     calendarEl.classList.remove('slide-out-left', 'slide-out-right');
     calendarEl.classList.add(direction > 0 ? 'slide-in-right' : 'slide-in-left');
-    
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         calendarEl.classList.remove('slide-in-right', 'slide-in-left');
@@ -1025,9 +606,7 @@ function animateMonthChange(direction) {
   }, 150);
 }
 
-/* ---------- Свайпы для ЗП ---------- */
-let salaryTouchStartX = 0;
-let salaryTouchStartY = 0;
+let salaryTouchStartX = 0, salaryTouchStartY = 0;
 const salaryWrapper = document.getElementById('salaryContentWrapper');
 
 document.getElementById('page-salary').addEventListener('touchstart', e => {
@@ -1036,26 +615,19 @@ document.getElementById('page-salary').addEventListener('touchstart', e => {
 }, {passive: true});
 
 document.getElementById('page-salary').addEventListener('touchend', e => {
-  const touchEndX = e.changedTouches[0].screenX;
-  const touchEndY = e.changedTouches[0].screenY;
-  
-  const diffX = touchEndX - salaryTouchStartX;
-  const diffY = touchEndY - salaryTouchStartY;
-
+  const diffX = e.changedTouches[0].screenX - salaryTouchStartX;
+  const diffY = e.changedTouches[0].screenY - salaryTouchStartY;
   if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-    if (diffX > 0) { animateSalaryMonthChange(-1); } 
-    else { animateSalaryMonthChange(1); }
+    if (diffX > 0) { animateSalaryMonthChange(-1); } else { animateSalaryMonthChange(1); }
   }
 }, {passive: true});
 
 function animateSalaryMonthChange(direction) {
   salaryWrapper.classList.add(direction > 0 ? 'slide-out-left' : 'slide-out-right');
-  
   setTimeout(() => {
     changeSalaryMonth(direction, false); 
     salaryWrapper.classList.remove('slide-out-left', 'slide-out-right');
     salaryWrapper.classList.add(direction > 0 ? 'slide-in-right' : 'slide-in-left');
-    
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         salaryWrapper.classList.remove('slide-in-right', 'slide-in-left');
@@ -1064,15 +636,11 @@ function animateSalaryMonthChange(direction) {
   }, 150);
 }
 
-/* ---------- Свайп для удаления шаблонов ---------- */
-let swipeStartX = 0;
-let swipeCurrentX = 0;
-let activeSwipeEl = null;
-let activeSwipeId = null;
+// Свайп для удаления шаблонов
+let swipeStartX = 0, swipeCurrentX = 0, activeSwipeEl = null;
 
 function initSwipeHandlers() {
   const containers = document.querySelectorAll('.swipe-container');
-  
   containers.forEach(container => {
     const content = container.querySelector('.swipe-content');
     const id = container.dataset.id;
@@ -1081,10 +649,8 @@ function initSwipeHandlers() {
       document.querySelectorAll('.swipe-content').forEach(el => {
         if (el !== content) el.style.transform = 'translateX(0)';
       });
-      
       swipeStartX = e.touches[0].clientX;
       activeSwipeEl = content;
-      activeSwipeId = id;
       content.classList.add('swiping');
     }, { passive: true });
     
@@ -1092,7 +658,6 @@ function initSwipeHandlers() {
       if (!activeSwipeEl) return;
       swipeCurrentX = e.touches[0].clientX;
       const diff = swipeCurrentX - swipeStartX;
-      
       if (diff < 0) {
         const translate = Math.max(diff, -100);
         content.style.transform = `translateX(${translate}px)`;
@@ -1102,45 +667,30 @@ function initSwipeHandlers() {
     content.addEventListener('touchend', () => {
       if (!activeSwipeEl) return;
       content.classList.remove('swiping');
-      
       const diff = swipeCurrentX - swipeStartX;
-      
-      if (diff < -50) { content.style.transform = 'translateX(-100px)'; } 
-      else { content.style.transform = 'translateX(0)'; }
-      
+      if (diff < -50) { content.style.transform = 'translateX(-100px)'; } else { content.style.transform = 'translateX(0)'; }
       activeSwipeEl = null;
     });
     
-    content.addEventListener('click', (e) => {
-      const currentTranslate = content.style.transform;
-      if (currentTranslate === 'translateX(-100px)') { content.style.transform = 'translateX(0)'; } 
+    content.addEventListener('click', () => {
+      if (content.style.transform === 'translateX(-100px)') { content.style.transform = 'translateX(0)'; } 
       else { showEditForm(id); }
     });
   });
 }
 
-/* ---------- Бэкап и напоминание ---------- */
+// Бэкап и напоминание
 function checkBackupReminder(){
   const now = new Date();
   const currentMonthStr = now.getFullYear() + '-' + pad(now.getMonth() + 1);
   const lastPromptMonth = localStorage.getItem('last_backup_prompt_month');
   const hasData = Object.keys(shifts).length > 0 || Object.keys(dayNotes).length > 0;
-  
   if (hasData && lastPromptMonth !== currentMonthStr){
-    setTimeout(() => {
-      document.getElementById('backupOverlay').classList.add('open');
-    }, 1000);
+    setTimeout(() => { document.getElementById('backupOverlay').classList.add('open'); }, 1000);
   }
 }
 
-function backupFromReminder(){
-  exportData();
-  const now = new Date();
-  const currentMonthStr = now.getFullYear() + '-' + pad(now.getMonth() + 1);
-  localStorage.setItem('last_backup_prompt_month', currentMonthStr);
-  closeBackupReminder();
-}
-
+function backupFromReminder(){ exportData(); closeBackupReminder(); }
 function closeBackupReminder(){
   const now = new Date();
   const currentMonthStr = now.getFullYear() + '-' + pad(now.getMonth() + 1);
@@ -1149,21 +699,12 @@ function closeBackupReminder(){
 }
 
 function exportData(){
-  const data = {
-    shifts: shifts,
-    templates: templates,
-    dayNotes: dayNotes,
-    exportDate: new Date().toISOString()
-  };
+  const data = { shifts, templates, dayNotes, exportDate: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'backup-smeny.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = 'backup-smeny.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 function importData(event){
@@ -1173,42 +714,30 @@ function importData(event){
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      if (!data.shifts || !data.templates) {
-        alert('Неверный формат файла');
-        return;
-      }
+      if (!data.shifts || !data.templates) { alert('Неверный формат файла'); return; }
       if (confirm('Вы уверены? Текущие данные будут заменены данными из файла.')) {
-        shifts = data.shifts;
-        templates = data.templates;
-        dayNotes = data.dayNotes || {};
-        
+        shifts = data.shifts; templates = data.templates; dayNotes = data.dayNotes || {};
         Storage.set(STORE_KEY, JSON.stringify(shifts));
         Storage.set(TEMPLATES_KEY, JSON.stringify(templates));
         Storage.set(DAY_NOTES_KEY, JSON.stringify(dayNotes));
-        
         alert('Данные успешно восстановлены!');
-        renderTemplates();
-        renderCalendar();
-        renderSalaryPage();
+        renderTemplates(); renderCalendar(); renderSalaryPage();
       }
-    } catch (err) {
-      alert('Ошибка чтения файла. Возможно, он поврежден.');
-    }
+    } catch (err) { alert('Ошибка чтения файла.'); }
     event.target.value = '';
   };
   reader.readAsText(file);
 }
 
-/* ---------- Палитра ---------- */
+// Палитра
 function renderColorPicker(){
   document.getElementById('newColors').innerHTML = COLORS.map(c =>
-    `<div class="color-swatch ${c===newColor?'selected':''}"
-          style="background:${c}" onclick="setNewColor('${c}')"></div>`
+    `<div class="color-swatch ${c===newColor?'selected':''}" style="background:${c}" onclick="setNewColor('${c}')"></div>`
   ).join('');
 }
 function setNewColor(c){ newColor = c; renderColorPicker(); }
 
-/* ---------- Форма добавления/редактирования ---------- */
+// Форма добавления/редактирования
 function showAddForm(){
   document.getElementById('addTemplateForm').classList.add('open');
   document.getElementById('showAddBtn').style.display = 'none';
@@ -1223,21 +752,15 @@ function showAddForm(){
 function showEditForm(id){
   const t = templates.find(x => x.id === id);
   if (!t) return;
-  
-  document.querySelectorAll('.swipe-content').forEach(el => {
-    el.style.transform = 'translateX(0)';
-  });
-  
+  document.querySelectorAll('.swipe-content').forEach(el => { el.style.transform = 'translateX(0)'; });
   document.getElementById('addTemplateForm').classList.add('open');
   document.getElementById('showAddBtn').style.display = 'none';
   document.getElementById('editingTemplateId').value = t.id;
   document.getElementById('newTemplateName').value = t.name;
   document.getElementById('newTemplateHours').value = t.defaultHours || '';
   document.getElementById('saveTemplateBtn').textContent = 'Сохранить';
-  
   newColor = t.color;
   renderColorPicker();
-  
   setTimeout(()=>document.getElementById('newTemplateName').focus(), 100);
 }
 
@@ -1254,7 +777,6 @@ function saveTemplate(){
   const defaultHours = parseFloat(hoursInput) || null;
   
   if (!name){ alert('Введи название смены'); return; }
-  
   let hoursChanged = false;
 
   if (id) {
@@ -1271,11 +793,7 @@ function saveTemplate(){
   }
   
   Storage.set(TEMPLATES_KEY, JSON.stringify(templates));
-  hideAddForm();
-  renderTemplates();
-  
-  renderCalendar();
-  renderSalaryPage();
+  hideAddForm(); renderTemplates(); renderCalendar(); renderSalaryPage();
 
   if (id && hoursChanged && defaultHours) {
     pendingSyncTemplateId = id;
@@ -1283,41 +801,29 @@ function saveTemplate(){
   }
 }
 
-/* ---------- Синхронизация ---------- */
+// Синхронизация
 function confirmSync() {
   document.getElementById('syncOverlay').classList.remove('open');
   if (!pendingSyncTemplateId) return;
-  
   const t = templates.find(x => x.id === pendingSyncTemplateId);
   if (!t) return;
-  
   let updatedCount = 0;
   for (const dateStr in shifts) {
     for (const s of shifts[dateStr]) {
-      if (s.name === t.name) {
-        s.hours = t.defaultHours;
-        updatedCount++;
-      }
+      if (s.name === t.name) { s.hours = t.defaultHours; updatedCount++; }
     }
   }
-  
   Storage.set(STORE_KEY, JSON.stringify(shifts));
-  renderCalendar();
-  renderSalaryPage();
-  pendingSyncTemplateId = null;
+  renderCalendar(); renderSalaryPage(); pendingSyncTemplateId = null;
   if (updatedCount > 0) { alert(`Готово! Обновлено смен: ${updatedCount}`); }
 }
 
-function closeSyncOverlay() {
-  document.getElementById('syncOverlay').classList.remove('open');
-  pendingSyncTemplateId = null;
-}
+function closeSyncOverlay() { document.getElementById('syncOverlay').classList.remove('open'); pendingSyncTemplateId = null; }
 
-/* ---------- Шаблоны ---------- */
+// Шаблоны
 function renderTemplates(){
   const activeTemplates = templates.filter(t => !t.archived);
   const el = document.getElementById('templateList');
-  
   if (!activeTemplates.length){
     el.innerHTML = '<div class="empty-hint">Пока нет смен. Нажми «+ Добавить».</div>';
   } else {
@@ -1343,37 +849,22 @@ function archiveTemplate(id){
   if (!t) return;
   if (!confirm('Убрать смену «' + t.name + '» в архив? В календаре все записи сохранятся.')) return;
   const idx = templates.findIndex(x => x.id === id);
-  if (idx !== -1) {
-    templates[idx].archived = true;
-    Storage.set(TEMPLATES_KEY, JSON.stringify(templates));
-    renderTemplates();
-  }
+  if (idx !== -1) { templates[idx].archived = true; Storage.set(TEMPLATES_KEY, JSON.stringify(templates)); renderTemplates(); }
 }
 
 function restoreTemplate(id){
   const idx = templates.findIndex(x => x.id === id);
-  if (idx !== -1) {
-    templates[idx].archived = false;
-    Storage.set(TEMPLATES_KEY, JSON.stringify(templates));
-    renderTemplates();
-    openArchive();
-  }
+  if (idx !== -1) { templates[idx].archived = false; Storage.set(TEMPLATES_KEY, JSON.stringify(templates)); renderTemplates(); openArchive(); }
 }
 
-/* ---------- Модалка Архива ---------- */
 function openArchive() {
   const archivedTemplates = templates.filter(t => t.archived);
   const archiveList = document.getElementById('archiveList');
-  
-  if (!archivedTemplates.length) {
-    archiveList.innerHTML = '<div class="empty-hint">Архив пуст.</div>';
-  } else {
+  if (!archivedTemplates.length) { archiveList.innerHTML = '<div class="empty-hint">Архив пуст.</div>'; } 
+  else {
     archiveList.innerHTML = archivedTemplates.map(t => `
       <div class="archive-item">
-        <div class="left">
-          <span class="dot" style="background:${t.color}"></span>
-          <span class="name">${t.name}</span>
-        </div>
+        <div class="left"><span class="dot" style="background:${t.color}"></span><span class="name">${t.name}</span></div>
         <button class="restore-btn" onclick="restoreTemplate('${t.id}')">Вернуть</button>
       </div>
     `).join('');
@@ -1381,19 +872,14 @@ function openArchive() {
   document.getElementById('archiveModal').classList.add('open');
 }
 
-function closeArchive() {
-  document.getElementById('archiveModal').classList.remove('open');
-}
+function closeArchive() { document.getElementById('archiveModal').classList.remove('open'); }
 
-/* ---------- Режим выставления ---------- */
+// Режим выставления
 function togglePlaceMode(){
   if (placeMode){ exitPlaceMode(); } 
   else {
     const active = templates.filter(t => !t.archived);
-    if (!active.length){
-      alert('Сначала добавь смены на вкладке «Мои смены»');
-      return;
-    }
+    if (!active.length){ alert('Сначала добавь смены на вкладке «Мои смены»'); return; }
     openPlacePicker();
   }
 }
@@ -1420,17 +906,10 @@ function selectPlaceTemplate(id){
   if (!t) return;
   placeTemplate = { id: t.id, name: t.name, color: t.color, defaultHours: t.defaultHours };
   placeMode = true;
-  closePlacePicker();
-  updatePlaceUI();
-  renderCalendar();
+  closePlacePicker(); updatePlaceUI(); renderCalendar();
 }
 
-function exitPlaceMode(){
-  placeMode = false;
-  placeTemplate = null;
-  updatePlaceUI();
-  renderCalendar();
-}
+function exitPlaceMode(){ placeMode = false; placeTemplate = null; updatePlaceUI(); renderCalendar(); }
 
 function updatePlaceUI(){
   const btn = document.getElementById('placeBtn');
@@ -1447,20 +926,17 @@ function updatePlaceUI(){
   }
 }
 
-/* ---------- Календарь ---------- */
+// Календарь
 function buildCalendarHtml(){
   const y = currentYear, m = currentMonth;
   const first = new Date(y, m, 1);
   let startDow = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(y, m+1, 0).getDate();
-
   const prevMonthDays = new Date(y, m, 0).getDate();
   const totalCells = startDow + daysInMonth;
   const trailing = (7 - (totalCells % 7)) % 7;
-
   const tKey = todayKey();
   const tmKey = tomorrowKey();
-
   let html = '';
 
   for (let i = startDow - 1; i >= 0; i--){
@@ -1469,18 +945,15 @@ function buildCalendarHtml(){
     const key = dateKey(pd.getFullYear(), pd.getMonth(), d);
     html += buildDayCell(key, d, true, tKey, tmKey);
   }
-
   for (let d=1; d<=daysInMonth; d++){
     const key = dateKey(y,m,d);
     html += buildDayCell(key, d, false, tKey, tmKey);
   }
-
   for (let d=1; d<=trailing; d++){
     const nd = new Date(y, m+1, d);
     const key = dateKey(nd.getFullYear(), nd.getMonth(), d);
     html += buildDayCell(key, d, true, tKey, tmKey);
   }
-
   return html;
 }
 
@@ -1489,7 +962,6 @@ function buildDayCell(key, dayNum, otherMonth, tKey, tmKey){
   const total = list.reduce((s,x)=>s+(+x.income||0),0);
   const dayNote = dayNotes[key] || '';
   const hasNote = list.some(s => s.note && s.note.trim().length > 0) || dayNote.trim().length > 0;
-  
   const isPastOrToday = key <= tKey;
   const hasMissingIncome = isPastOrToday && list.some(s => s.income === null || s.income === undefined || s.income === '');
 
@@ -1500,9 +972,8 @@ function buildDayCell(key, dayNum, otherMonth, tKey, tmKey){
   if (list.length) cls += ' has-shift';
 
   let bg = '';
-  if (list.length === 1){
-    bg = list[0].color;
-  } else if (list.length > 1){
+  if (list.length === 1){ bg = list[0].color; } 
+  else if (list.length > 1){
     const cols = list.map(s=>s.color);
     const step = 100 / cols.length;
     const stops = cols.map((c,i)=>`${c} ${i*step}%, ${c} ${(i+1)*step}%`).join(', ');
@@ -1539,31 +1010,20 @@ function onDayTap(key){
       if (!shifts[key].length) delete shifts[key];
     } else {
       shifts[key].push({ 
-        templateId: placeTemplate.id, 
-        name: placeTemplate.name, 
-        color: placeTemplate.color, 
-        income: null, 
-        hours: placeTemplate.defaultHours || null,
-        note: '' 
+        templateId: placeTemplate.id, name: placeTemplate.name, color: placeTemplate.color, 
+        income: null, hours: placeTemplate.defaultHours || null, note: '' 
       });
     }
     Storage.set(STORE_KEY, JSON.stringify(shifts));
-    updateCalendarGrid();
-    renderTodayNotes();
-    renderSalaryPage();
-  } else {
-    openDay(key);
-  }
+    updateCalendarGrid(); renderTodayNotes(); renderSalaryPage();
+  } else { openDay(key); }
 }
 
 function renderCalendar(){
   const d = new Date(currentYear, currentMonth, 1);
-  document.getElementById('monthTitle').textContent =
-    d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+  document.getElementById('monthTitle').textContent = d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
   document.getElementById('calendar').innerHTML = buildCalendarHtml();
-  renderTodayNotes();
-  updatePlaceUI();
-  
+  renderTodayNotes(); updatePlaceUI();
   const { total } = collectMonthData(currentYear, currentMonth);
   document.getElementById('headerMonthTotal').textContent = total.toLocaleString('ru-RU') + ' ₽';
 }
@@ -1579,19 +1039,11 @@ function renderTodayNotes(){
   const list = shifts[tKey] || [];
   const dayNote = dayNotes[tKey] || '';
   const el = document.getElementById('todayNotesText');
-  
   let notesArr = [];
   if (dayNote.trim()) { notesArr.push(dayNote.trim()); }
   list.forEach(s => { if (s.note && s.note.trim()) { notesArr.push(`[${s.name}] ${s.note.trim()}`); } });
-  
   if (notesArr.length === 0) { el.innerHTML = '<span class="no-notes">Нет заметок</span>'; } 
   else { el.textContent = notesArr.join('\n'); }
-}
-
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
 }
 
 function changeMonth(delta, animate = true){
@@ -1599,21 +1051,15 @@ function changeMonth(delta, animate = true){
   let y = currentYear;
   if (m < 0){ m = 11; y--; }
   if (m > 11){ m = 0; y++; }
-  currentMonth = m;
-  currentYear = y;
+  currentMonth = m; currentYear = y;
   renderCalendar(); 
 }
 
-/* ---------- Страница ЗП ---------- */
+// Страница ЗП
 function collectMonthData(y, m){
-  let total = 0;
-  let totalHours = 0;
-  const byShop = {};
-  const colorByShop = {};
-  const countByShop = {};
-  
+  let total = 0, totalHours = 0;
+  const byShop = {}, colorByShop = {}, countByShop = {};
   const tKey = todayKey();
-
   for (const key in shifts){
     const [ky,km] = key.split('-').map(Number);
     if (ky===y && km===m+1){
@@ -1623,7 +1069,6 @@ function collectMonthData(y, m){
         byShop[s.name] = (byShop[s.name]||0) + inc;
         countByShop[s.name] = (countByShop[s.name]||0) + 1;
         if (!colorByShop[s.name]) colorByShop[s.name] = s.color;
-        
         if (key <= tKey) { totalHours += (+s.hours || 0); }
       }
     }
@@ -1632,11 +1077,8 @@ function collectMonthData(y, m){
 }
 
 function renderSalaryPage(){
-  document.getElementById('salaryMonthTitle').textContent =
-    MONTHS[salaryMonth] + ' ' + salaryYear;
-
+  document.getElementById('salaryMonthTitle').textContent = MONTHS[salaryMonth] + ' ' + salaryYear;
   const { total, totalHours, byShop, colorByShop, countByShop } = collectMonthData(salaryYear, salaryMonth);
-
   document.getElementById('salaryTotal').textContent = total.toLocaleString('ru-RU') + ' ₽';
   
   const statsEl = document.getElementById('salaryStats');
@@ -1645,38 +1087,27 @@ function renderSalaryPage(){
     statsEl.innerHTML = `<span>Часов: <b>${totalHours}</b></span> <span>Ставка: <b>${rate} ₽/ч</b></span>`;
   } else { statsEl.innerHTML = ''; }
 
-  const bd = Object.entries(byShop).sort((a,b)=>b[1]-a[1])
-    .map(([name,sum])=>{
-      const cnt = countByShop[name] || 0;
-      const word = shiftWord(cnt);
-      return `<div class="shop-line">
-        <div class="left">
-          <span class="dot" style="background:${colorByShop[name]||'#64748b'}"></span>
-          <div class="shop-info">
-            <div class="shop-name">${name}</div>
-            <div class="shop-count">${cnt} ${word}</div>
-          </div>
-        </div>
-        <span class="sum">${sum.toLocaleString('ru-RU')} ₽</span>
-      </div>`;
-    }).join('');
-  document.getElementById('salaryBreakdown').innerHTML = bd ||
-    `<div class="empty-hint">Нет смен в ${MONTHS[salaryMonth]} ${salaryYear}</div>`;
+  const bd = Object.entries(byShop).sort((a,b)=>b[1]-a[1]).map(([name,sum])=>{
+    const cnt = countByShop[name] || 0;
+    const word = shiftWord(cnt);
+    return `<div class="shop-line">
+      <div class="left"><span class="dot" style="background:${colorByShop[name]||'#64748b'}"></span>
+      <div class="shop-info"><div class="shop-name">${name}</div><div class="shop-count">${cnt} ${word}</div></div></div>
+      <span class="sum">${sum.toLocaleString('ru-RU')} ₽</span>
+    </div>`;
+  }).join('');
+  document.getElementById('salaryBreakdown').innerHTML = bd || `<div class="empty-hint">Нет смен в ${MONTHS[salaryMonth]} ${salaryYear}</div>`;
 
-  renderChart();
-  renderPastMonths();
-  checkMissingIncome();
+  renderChart(); renderPastMonths(); checkMissingIncome();
 }
 
 function shiftWord(n){
-  const mod10 = n % 10;
-  const mod100 = n % 100;
+  const mod10 = n % 10, mod100 = n % 100;
   if (mod10 === 1 && mod100 !== 11) return 'смена';
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'смены';
   return 'смен';
 }
 
-/* ---------- График ---------- */
 function renderChart() {
   const container = document.getElementById('chartContainer');
   const monthsData = [];
@@ -1719,11 +1150,9 @@ function jumpToChartMonth(y, m) {
   renderSalaryPage();
 }
 
-/* ---------- Незаполненная ЗП ---------- */
 function checkMissingIncome() {
   const tKey = todayKey();
   let missingCount = 0;
-  
   for (const key in shifts) {
     if (key <= tKey) {
       for (const s of shifts[key]) {
@@ -1731,7 +1160,6 @@ function checkMissingIncome() {
       }
     }
   }
-  
   const banner = document.getElementById('salaryWarningBanner');
   if (missingCount > 0) {
     document.getElementById('missingCount').textContent = missingCount;
@@ -1742,32 +1170,23 @@ function checkMissingIncome() {
 function openMissingList() {
   const tKey = todayKey();
   const list = [];
-  
   for (const key in shifts) {
     if (key <= tKey) {
       for (const s of shifts[key]) {
-        if (s.income === null || s.income === undefined || s.income === '') {
-          list.push({ date: key, shift: s });
-        }
+        if (s.income === null || s.income === undefined || s.income === '') { list.push({ date: key, shift: s }); }
       }
     }
   }
-  
   list.sort((a,b) => b.date.localeCompare(a.date));
-  
   const container = document.getElementById('missingList');
-  if (!list.length) {
-    container.innerHTML = '<div class="empty-hint">Все ЗП заполнены! 🎉</div>';
-  } else {
+  if (!list.length) { container.innerHTML = '<div class="empty-hint">Все ЗП заполнены! 🎉</div>'; } 
+  else {
     container.innerHTML = list.map(item => {
       const d = new Date(item.date + 'T00:00:00');
       const formattedDate = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
       return `
         <div class="missing-item" onclick="jumpToMissing('${item.date}')">
-          <div>
-            <div class="date">${formattedDate}</div>
-            <div class="shop">${item.shift.name}</div>
-          </div>
+          <div><div class="date">${formattedDate}</div><div class="shop">${item.shift.name}</div></div>
           <div class="arrow">›</div>
         </div>
       `;
@@ -1779,12 +1198,9 @@ function openMissingList() {
 function jumpToMissing(dateKeyStr) {
   closeMissingList();
   switchTab('calendar');
-  
   const [y, m] = dateKeyStr.split('-').map(Number);
-  currentYear = y;
-  currentMonth = m - 1;
+  currentYear = y; currentMonth = m - 1;
   renderCalendar();
-  
   setTimeout(() => { openDay(dateKeyStr); }, 100);
 }
 
@@ -1798,26 +1214,19 @@ function renderPastMonths(){
     if (!monthsMap[mk]) monthsMap[mk] = 0;
     for (const s of shifts[key]) monthsMap[mk] += (+s.income || 0);
   }
-
   const currentMk = salaryYear + '-' + pad(salaryMonth+1);
   if (!monthsMap[currentMk]) monthsMap[currentMk] = 0;
-
   let sorted = Object.entries(monthsMap).sort((a,b)=> b[0].localeCompare(a[0]));
   sorted = sorted.filter(([mk, sum]) => sum > 0 || mk === currentMk);
-
   const toShow = showAllPastMonths ? sorted : sorted.slice(0, 3);
-
   document.getElementById('pastMonths').innerHTML = toShow.map(([mk,sum])=>{
     const [y,m] = mk.split('-').map(Number);
     const isCurrent = (y===salaryYear && m===salaryMonth+1);
-    return `<div class="past-month-row"
-                 style="${isCurrent?'border-color:#38bdf8':''}"
-                 onclick="jumpToSalaryMonth(${y}, ${m-1})">
+    return `<div class="past-month-row" style="${isCurrent?'border-color:#38bdf8':''}" onclick="jumpToSalaryMonth(${y}, ${m-1})">
       <span class="name">${MONTHS[m-1]} ${y}${isCurrent?' •':''}</span>
       <span class="sum">${sum.toLocaleString('ru-RU')} ₽</span>
     </div>`;
   }).join('');
-
   const showAllBtn = document.getElementById('showAllMonthsBtn');
   if (sorted.length > 3) {
     showAllBtn.style.display = 'block';
@@ -1825,36 +1234,25 @@ function renderPastMonths(){
   } else { showAllBtn.style.display = 'none'; }
 }
 
-function toggleAllMonths(){
-  showAllPastMonths = !showAllPastMonths;
-  renderPastMonths();
-}
+function toggleAllMonths(){ showAllPastMonths = !showAllPastMonths; renderPastMonths(); }
 
 function changeSalaryMonth(delta, animate = true){
   let m = salaryMonth + delta;
   let y = salaryYear;
   if (m < 0){ m = 11; y--; }
   if (m > 11){ m = 0; y++; }
-  salaryMonth = m;
-  salaryYear = y;
+  salaryMonth = m; salaryYear = y;
   renderSalaryPage();
 }
 
-function jumpToSalaryMonth(y, m){
-  salaryYear = y;
-  salaryMonth = m;
-  renderSalaryPage();
-}
+function jumpToSalaryMonth(y, m){ salaryYear = y; salaryMonth = m; renderSalaryPage(); }
 
-/* ---------- Модалка дня ---------- */
+// Модалка дня
 function openDay(key){
   selectedDate = key;
   const t = new Date(key+'T00:00:00');
-  document.getElementById('modalTitle').textContent =
-    t.toLocaleDateString('ru-RU', { day:'numeric', month:'long', weekday:'long' });
-  
+  document.getElementById('modalTitle').textContent = t.toLocaleDateString('ru-RU', { day:'numeric', month:'long', weekday:'long' });
   document.getElementById('dayNoteInput').value = dayNotes[key] || '';
-  
   renderDayShifts();
   renderPickList();
   document.getElementById('modalBg').classList.add('open');
@@ -1865,38 +1263,28 @@ function setDayNote(value){
   const trimmed = value.trim();
   if (trimmed){ dayNotes[selectedDate] = trimmed; } 
   else { delete dayNotes[selectedDate]; }
-  
   Storage.set(DAY_NOTES_KEY, JSON.stringify(dayNotes));
-  updateCalendarGrid();
-  renderTodayNotes();
+  updateCalendarGrid(); renderTodayNotes();
 }
 
 function renderDayShifts(){
   const list = shifts[selectedDate] || [];
   const block = document.getElementById('dayShiftsBlock');
-  if (!list.length){
-    block.innerHTML = '<div class="empty-hint">На этот день смен нет. Выбери ниже.</div>';
-    return;
-  }
+  if (!list.length){ block.innerHTML = '<div class="empty-hint">На этот день смен нет. Выбери ниже.</div>'; return; }
   block.innerHTML = list.map((s,i)=>`
     <div class="shift-row" style="border-left-color:${s.color}">
       <div class="top">
-        <div class="left">
-          <span class="dot" style="background:${s.color}"></span>
-          <span class="name">${s.name}</span>
-        </div>
+        <div class="left"><span class="dot" style="background:${s.color}"></span><span class="name">${s.name}</span></div>
         <button class="del" onclick="removeShift(${i})">×</button>
       </div>
       <div class="fields">
         <div class="field">
           <label>ЗП (₽)</label>
-          <input type="number" inputmode="decimal" placeholder="0"
-                 value="${s.income || ''}" onchange="setIncome(${i}, this.value)">
+          <input type="number" inputmode="decimal" placeholder="0" value="${s.income || ''}" onchange="setIncome(${i}, this.value)">
         </div>
         <div class="field hours">
           <label>Часы</label>
-          <input type="number" inputmode="decimal" placeholder="0"
-                 value="${s.hours || ''}" onchange="setHours(${i}, this.value)">
+          <input type="number" inputmode="decimal" placeholder="0" value="${s.hours || ''}" onchange="setHours(${i}, this.value)">
         </div>
       </div>
     </div>
@@ -1908,9 +1296,7 @@ function setIncome(index, value){
   if (!shifts[selectedDate]?.[index]) return;
   shifts[selectedDate][index].income = isNaN(v) ? null : v;
   Storage.set(STORE_KEY, JSON.stringify(shifts));
-  renderTodayNotes();
-  updateCalendarGrid();
-  renderSalaryPage();
+  renderTodayNotes(); updateCalendarGrid(); renderSalaryPage();
 }
 
 function setHours(index, value){
@@ -1924,10 +1310,7 @@ function setHours(index, value){
 function renderPickList(){
   const el = document.getElementById('pickList');
   const active = templates.filter(t => !t.archived);
-  if (!active.length){
-    el.innerHTML = '<div class="empty-hint">Сначала добавь смены на вкладке «Мои смены».</div>';
-    return;
-  }
+  if (!active.length){ el.innerHTML = '<div class="empty-hint">Сначала добавь смены на вкладке «Мои смены».</div>'; return; }
   el.innerHTML = active.map(t=>`
     <div class="pick-item" onclick="pickTemplate('${t.id}')">
       <div class="left">
@@ -1944,19 +1327,9 @@ function pickTemplate(id){
   const t = templates.find(x => x.id === id);
   if (!t) return;
   if (!shifts[selectedDate]) shifts[selectedDate] = [];
-  shifts[selectedDate].push({ 
-    templateId: t.id, 
-    name: t.name, 
-    color: t.color, 
-    income: null, 
-    hours: t.defaultHours || null, 
-    note: '' 
-  });
+  shifts[selectedDate].push({ templateId: t.id, name: t.name, color: t.color, income: null, hours: t.defaultHours || null, note: '' });
   Storage.set(STORE_KEY, JSON.stringify(shifts));
-  renderDayShifts();
-  updateCalendarGrid();
-  renderTodayNotes();
-  renderSalaryPage();
+  renderDayShifts(); updateCalendarGrid(); renderTodayNotes(); renderSalaryPage();
 }
 
 function removeShift(index){
@@ -1964,10 +1337,7 @@ function removeShift(index){
   shifts[selectedDate].splice(index,1);
   if (!shifts[selectedDate].length) delete shifts[selectedDate];
   Storage.set(STORE_KEY, JSON.stringify(shifts));
-  renderDayShifts();
-  updateCalendarGrid();
-  renderTodayNotes();
-  renderSalaryPage();
+  renderDayShifts(); updateCalendarGrid(); renderTodayNotes(); renderSalaryPage();
 }
 
 function closeModal(){
@@ -1975,22 +1345,13 @@ function closeModal(){
   renderCalendar();
 }
 
-document.getElementById('modalBg').addEventListener('click', e=>{
-  if (e.target.id==='modalBg') closeModal();
-});
-document.getElementById('missingModalBg').addEventListener('click', e=>{
-  if (e.target.id==='missingModalBg') closeMissingList();
-});
-document.getElementById('placePicker').addEventListener('click', e=>{
-  if (e.target.id==='placePicker') closePlacePicker();
-});
-document.getElementById('archiveModal').addEventListener('click', e=>{
-  if (e.target.id==='archiveModal') closeArchive();
-});
+document.getElementById('modalBg').addEventListener('click', e=>{ if (e.target.id==='modalBg') closeModal(); });
+document.getElementById('missingModalBg').addEventListener('click', e=>{ if (e.target.id==='missingModalBg') closeMissingList(); });
+document.getElementById('placePicker').addEventListener('click', e=>{ if (e.target.id==='placePicker') closePlacePicker(); });
+document.getElementById('archiveModal').addEventListener('click', e=>{ if (e.target.id==='archiveModal') closeArchive(); });
 
-/* ---------- Старт ---------- */
+// Старт
 initApp();
 </script>
 </body>
 </html>
-```
