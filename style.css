@@ -1,0 +1,179 @@
+:root {
+    --bg-color: #1c2536;
+    --card-bg: #273246;
+    --text-color: #ffffff;
+    --accent-color: #2ea6ff;
+    --border-color: #3b4a63;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    /* Учитываем безопасные зоны (вырезы экрана) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.top-header {
+    padding: 15px;
+}
+
+.notes-card {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.notes-card h3 {
+    font-size: 12px;
+    margin-bottom: 5px;
+    opacity: 0.8;
+}
+
+.notes-card p {
+    font-size: 14px;
+    color: #a0b4d8;
+    font-style: italic;
+}
+
+main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 15px;
+    position: relative;
+}
+
+/* Календарь */
+.calendar-container {
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.calendar-header button {
+    background: var(--bg-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.calendar-header h2 {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.6;
+    margin-bottom: 10px;
+}
+
+.days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.day {
+    aspect-ratio: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-color);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.day.today {
+    border-color: var(--accent-color);
+}
+
+.day.selected {
+    border-color: #ffa500;
+}
+
+/* Кнопка добавления (FAB) */
+.fab {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #3b4a63;
+    color: white;
+    font-size: 24px;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Нижнее меню */
+.bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    background-color: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: #6b7f9e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 5px 15px;
+    border-radius: 10px;
+}
+
+.nav-btn .icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.nav-btn.active {
+    color: var(--accent-color);
+    background-color: rgba(46, 166, 255, 0.1);
+}
