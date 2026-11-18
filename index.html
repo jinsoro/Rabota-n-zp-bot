@@ -97,7 +97,6 @@
   }
   .day.other-month { opacity: 0.3; }
   .day.today { box-shadow: 0 0 0 2px #38bdf8 inset; }
-  .day.tomorrow-highlight { box-shadow: 0 0 0 2px #f59e0b inset; }
   .day .num { line-height: 1; font-weight: 600; font-size: 12px; color: #e5e7eb; text-align: center; margin-bottom: 1px; flex-shrink: 0; }
   .day.has-shift .num { color: #fff; }
   
@@ -271,6 +270,39 @@
   .missing-item .date { font-weight: 600; color: #e5e7eb; }
   .missing-item .shop { font-size: 12px; color: #94a3b8; margin-top: 2px; }
   .missing-item .arrow { color: #38bdf8; font-size: 18px; }
+
+  /* Планер: почасовой список задач */
+  .planner-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+  .planner-date-title{font-weight:600;font-size:16px;color:#e5e7eb}
+  .planner-date-nav{display:flex;align-items:center;gap:10px}
+  .planner-date-nav button,.planner-today-btn{background:#334155;border:0;color:#e5e7eb;border-radius:8px;cursor:pointer;padding:7px 11px;font-size:15px}
+  .planner-shifts-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .planner-shift-badge{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;font-size:12px}
+  .planner-shift-badge .dot{width:8px;height:8px;border-radius:50%}
+  .planner-shift-badge .time{color:#94a3b8;font-size:11px}
+  .time-grid-card{padding:0;overflow:hidden}
+  .time-row{display:flex;border-bottom:1px solid #334155;min-height:60px}
+  .time-row:last-child{border-bottom:0}
+  .time-label{width:60px;flex-shrink:0;padding:12px 0 0 12px;font-size:12px;font-weight:600;color:#64748b;border-right:1px solid #334155;background:#1e293b}
+  .time-content{flex:1;padding:8px;display:flex;flex-direction:column;gap:6px;background:#0f172a;min-width:0}
+  .time-row.past-hour .time-label{color:#334155}.time-row.past-hour .time-content{opacity:.55}
+  .task-card{background:#1e3a8a;border-left:3px solid #38bdf8;border-radius:6px;padding:8px 10px;cursor:pointer;overflow-wrap:anywhere}
+  .task-card .t-text{font-size:13px;font-weight:600;color:#e5e7eb;line-height:1.3}
+  .task-card .t-desc{font-size:11px;color:#bfdbfe;margin-top:3px;line-height:1.3;white-space:pre-wrap}
+  .task-action-buttons{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+  .task-btn{display:inline-block;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;background:#334155;color:#e5e7eb}
+  .add-task-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;z-index:30}
+  .add-task-modal.open{display:flex}
+  .add-task-modal .inner{background:#1e293b;width:100%;border-radius:18px 18px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
+  .add-task-modal h2{font-size:16px;margin:0 0 12px}
+  .task-form-group{margin-bottom:12px}
+  .task-form-group label{display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;margin-bottom:4px;font-weight:600}
+  .task-form-group input,.task-form-group textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#e5e7eb;font-size:15px;font-family:inherit}
+  .task-form-group textarea{resize:vertical;min-height:65px}
+  .planner-fab{position:fixed;right:16px;bottom:90px;width:56px;height:56px;border-radius:50%;background:#334155;color:#fff;border:0;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:20;display:none;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s}.planner-fab:active{transform:scale(.95)}.planner-fab svg{width:24px;height:24px;fill:currentColor}
+  .planner-fab.show{display:block}
+  .day-planner-task{padding:8px 10px;border-radius:8px;background:#0f172a;margin:6px 0;font-size:13px}
+
 </style>
 </head>
 <body>
@@ -342,6 +374,31 @@
   </div>
 </div>
 
+
+<!-- ========== ПЛАНЕР ========== -->
+<div class="page" id="page-planner">
+  <div class="planner-header">
+    <div class="planner-date-nav">
+      <button onclick="changePlannerDay(-1)">‹</button>
+      <span class="planner-date-title" id="plannerDateTitle"></span>
+      <button onclick="changePlannerDay(1)">›</button>
+    </div>
+    <button class="planner-today-btn" onclick="goToTodayPlanner()">Сегодня</button>
+  </div>
+  <div id="plannerShiftsContainer"></div>
+  <div class="card time-grid-card" id="plannerGridCard"><div id="plannerTimeGrid"></div></div>
+</div>
+<button class="planner-fab" id="addTaskFab" onclick="openTaskModal()" aria-label="Добавить задачу"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+<div class="add-task-modal" id="addTaskModal"><div class="inner">
+  <h2 id="taskModalTitle">Новая задача</h2>
+  <div class="task-form-group"><label>Время</label><input type="time" id="taskTimeInput" value="09:00"></div>
+  <div class="task-form-group"><label>Что нужно сделать?</label><input type="text" id="taskTitleInput" placeholder="Встреча, заказ, звонок"></div>
+  <div class="task-form-group"><label>Адрес или детали (необязательно)</label><textarea id="taskDescInput" placeholder="Адрес, телефон, комментарий..."></textarea></div>
+  <input type="hidden" id="editingTaskId" value="">
+  <button class="btn btn-primary" onclick="saveTask()" style="background:#22c55e;color:#052e16;margin-bottom:8px">Сохранить</button>
+  <button class="btn btn-cancel" onclick="closeTaskModal()">Отмена</button>
+</div></div>
+
 <!-- ========== СТРАНИЦА 3: МОИ СМЕНЫ ========== -->
 <div class="page" id="page-templates">
   <div class="card">
@@ -382,6 +439,10 @@
     <span class="ico"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg></span>
     <span>Календарь</span>
   </button>
+  <button id="tab-planner" onclick="switchTab('planner')">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+    <span>Планер</span>
+  </button>
   <button id="tab-salary" onclick="switchTab('salary')">
     <span class="ico"><svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></span>
     <span>ЗП</span>
@@ -419,8 +480,15 @@
       <textarea id="dayNoteInput" placeholder="Например: выходной, отвезти документы..." onchange="setDayNote(this.value)"></textarea>
     </div>
     <div id="dayShiftsBlock"></div>
-    <div class="card-title" style="margin-top:14px;">Добавить смену</div>
+    <div id="dayPlannerBlock"></div>
+    <div class="card-title" style="margin-top:14px;">Добавить смену из шаблона</div>
     <div class="pick-list" id="pickList"></div>
+    <div class="day-note-block" style="margin-top:12px;">
+      <label>Или добавить как в исходной программе</label>
+      <input id="quickShiftName" placeholder="Название магазина / смены" style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e5e7eb;font-size:15px;margin-bottom:8px;">
+      <input id="quickShiftIncome" type="number" inputmode="decimal" placeholder="Доход, ₽ (необязательно)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e5e7eb;font-size:15px;margin-bottom:8px;">
+      <button class="add-btn" style="width:100%;" onclick="quickAddShift()">+ Добавить смену</button>
+    </div>
     <button class="btn btn-cancel" onclick="closeModal()">Закрыть</button>
   </div>
 </div>
@@ -469,25 +537,66 @@ if (tg) {
   tg.setBackgroundColor('#0f172a');
 }
 
-// 2. Обертка для хранилища (LocalStorage + CloudStorage)
+// 2. Надёжное хранилище: локальная копия + Telegram CloudStorage.
+// Каждая запись получает timestamp. При запуске выбирается более свежая копия,
+// а переключение вкладок никогда не перезаписывает состояние из облака.
 const Storage = {
-  async get(key) {
-    const local = localStorage.getItem(key);
-    if (tg && tg.CloudStorage) {
-      return new Promise((resolve) => {
-        tg.CloudStorage.getItem(key, (err, remote) => {
-          if (!err && remote) { resolve(remote); } 
-          else { resolve(local); }
-        });
-      });
-    }
-    return local;
+  queues: new Map(),
+  decode(raw) {
+    if (raw == null) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.__shiftAppStorage === 1 && typeof parsed.value === 'string') {
+        return { value: parsed.value, updatedAt: Number(parsed.updatedAt) || 0 };
+      }
+    } catch (_) {}
+    // Поддержка данных предыдущих версий, где хранился обычный JSON.
+    return { value: raw, updatedAt: 0 };
   },
-  async set(key, value) {
-    localStorage.setItem(key, value);
-    if (tg && tg.CloudStorage) {
-      tg.CloudStorage.setItem(key, value);
-    }
+  encode(value, updatedAt) {
+    return JSON.stringify({ __shiftAppStorage: 1, updatedAt, value: String(value) });
+  },
+  cloudGet(key) {
+    if (!tg?.CloudStorage) return Promise.resolve(null);
+    return new Promise(resolve => {
+      try {
+        tg.CloudStorage.getItem(key, (err, value) => {
+          if (err || value == null || value === '') return resolve(null);
+          resolve(this.decode(value));
+        });
+      } catch (_) { resolve(null); }
+    });
+  },
+  async get(key) {
+    const local = this.decode(localStorage.getItem(key));
+    const remote = await this.cloudGet(key);
+    const chosen = remote && (!local || remote.updatedAt > local.updatedAt) ? remote : local;
+    if (!chosen) return null;
+    // Обновляем локальный кэш только если облачная версия действительно новее.
+    localStorage.setItem(key, this.encode(chosen.value, chosen.updatedAt));
+    return chosen.value;
+  },
+  set(key, value) {
+    const stamp = Date.now();
+    const encoded = this.encode(value, stamp);
+    // Локальная запись выполняется синхронно — интерфейс сразу видит актуальные данные.
+    localStorage.setItem(key, encoded);
+    if (!tg?.CloudStorage) return Promise.resolve(true);
+    // Последовательная очередь не позволяет старой записи завершиться после новой.
+    const previous = this.queues.get(key) || Promise.resolve();
+    const next = previous.catch(() => {}).then(() => new Promise(resolve => {
+      try {
+        tg.CloudStorage.setItem(key, encoded, err => {
+          if (err) console.warn('Не удалось сохранить данные в Telegram CloudStorage:', key, err);
+          resolve(!err);
+        });
+      } catch (err) {
+        console.warn('Ошибка Telegram CloudStorage:', err);
+        resolve(false);
+      }
+    }));
+    this.queues.set(key, next);
+    return next;
   }
 };
 
@@ -495,6 +604,7 @@ const Storage = {
 const STORE_KEY = 'shifts_v4';
 const TEMPLATES_KEY = 'templates_v4';
 const DAY_NOTES_KEY = 'day_notes_v4';
+const PLANNER_KEY = 'planner_v3';
 const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const MONTHS = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
 const SHORT_MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
@@ -504,6 +614,10 @@ const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#ec4899'
 let templates = [];
 let shifts = {};
 let dayNotes = {};
+let plannerTasks = {};
+let plannerDate = new Date();
+let plannerTouchStartX = 0, plannerTouchStartY = 0;
+let taskSwipeStartX = 0;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 let selectedDate = null;
@@ -517,47 +631,78 @@ let pendingSyncTemplateId = null;
 
 // Запуск приложения
 async function initApp() {
-  const t = await Storage.get(TEMPLATES_KEY);
-  const s = await Storage.get(STORE_KEY);
-  const n = await Storage.get(DAY_NOTES_KEY);
+  const [t, s, n, pt] = await Promise.all([
+    Storage.get(TEMPLATES_KEY), Storage.get(STORE_KEY), Storage.get(DAY_NOTES_KEY), Storage.get(PLANNER_KEY)
+  ]);
 
   templates = t ? JSON.parse(t) : [];
   shifts = s ? JSON.parse(s) : {};
   dayNotes = n ? JSON.parse(n) : {};
+  plannerTasks = pt ? JSON.parse(pt) : {};
+
+  // Однократный перенос данных из первой готовой программы (shifts_v1 / shops_v1).
+  // Выполняется только если в Telegram-версии ещё нет собственного набора данных.
+  if (!t && !s) {
+    const legacyShiftsRaw = localStorage.getItem('shifts_v1');
+    const legacyShopsRaw = localStorage.getItem('shops_v1');
+    if (legacyShiftsRaw) {
+      try {
+        const legacyShifts = JSON.parse(legacyShiftsRaw) || {};
+        const legacyShops = legacyShopsRaw ? JSON.parse(legacyShopsRaw) : [];
+        const names = [...new Set([
+          ...legacyShops,
+          ...Object.values(legacyShifts).flat().map(x => x.shop).filter(Boolean)
+        ])];
+        templates = names.map((name, i) => ({
+          id: 'legacy_' + i, name, color: COLORS[i % COLORS.length], defaultHours: null, archived: false
+        }));
+        const byName = new Map(templates.map(x => [x.name, x]));
+        shifts = {};
+        for (const [date, items] of Object.entries(legacyShifts)) {
+          shifts[date] = (Array.isArray(items) ? items : []).map(item => {
+            const template = byName.get(item.shop) || { id: 'legacy_extra', name: item.shop || 'Смена', color: COLORS[0] };
+            return { templateId: template.id, name: template.name, color: template.color,
+              income: item.income == null ? null : Number(item.income), hours: null, note: '' };
+          });
+          if (!shifts[date].length) delete shifts[date];
+        }
+        dayNotes = {};
+        await Promise.all([
+          Storage.set(TEMPLATES_KEY, JSON.stringify(templates)),
+          Storage.set(STORE_KEY, JSON.stringify(shifts)),
+          Storage.set(DAY_NOTES_KEY, JSON.stringify(dayNotes))
+        ]);
+      } catch (err) {
+        console.error('Не удалось перенести данные старой версии:', err);
+        templates = []; shifts = {}; dayNotes = {};
+      }
+    }
+  }
 
   document.getElementById('dowRow').innerHTML = DOW.map(d => `<div class="dow">${d}</div>`).join('');
-
   renderTemplates();
   renderCalendar();
+  renderPlanner();
   checkBackupReminder();
 }
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function dateKey(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
 function todayKey(){ const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
-function tomorrowKey(){ const t = new Date(); t.setDate(t.getDate()+1); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
 
 function switchTab(tab){
-  document.getElementById('page-calendar').classList.toggle('active', tab==='calendar');
-  document.getElementById('page-salary').classList.toggle('active', tab==='salary');
-  document.getElementById('page-templates').classList.toggle('active', tab==='templates');
-  
-  document.getElementById('tab-calendar').classList.toggle('active', tab==='calendar');
-  document.getElementById('tab-salary').classList.toggle('active', tab==='salary');
-  document.getElementById('tab-templates').classList.toggle('active', tab==='templates');
-  
-  if (tab==='calendar'){ renderCalendar(); }
-  else if (tab==='salary'){ 
-    Storage.get(STORE_KEY).then(s => { shifts = s ? JSON.parse(s) : {}; renderSalaryPage(); });
-  }
-  else { renderTemplates(); }
-  
-  const fab = document.getElementById('placeBtn');
-  if (tab === 'calendar') { fab.classList.add('show'); } 
-  else { fab.classList.remove('show'); if (placeMode) exitPlaceMode(); }
-
-  const activePage = document.querySelector('.page.active');
-  if (activePage) activePage.scrollTop = 0;
+  ['calendar','salary','planner','templates'].forEach(name => {
+    document.getElementById('page-'+name).classList.toggle('active', tab===name);
+    document.getElementById('tab-'+name).classList.toggle('active', tab===name);
+  });
+  if (tab==='calendar') renderCalendar();
+  else if (tab==='salary') renderSalaryPage();
+  else if (tab==='planner') renderPlanner();
+  else renderTemplates();
+  document.getElementById('placeBtn').classList.toggle('show',tab==='calendar');
+  document.getElementById('addTaskFab').classList.toggle('show',tab==='planner');
+  if (tab!=='calendar' && placeMode) exitPlaceMode();
+  const activePage=document.querySelector('.page.active'); if(activePage) activePage.scrollTop=0;
 }
 
 // Свайпы и анимация
@@ -669,7 +814,7 @@ function checkBackupReminder(){
   const now = new Date();
   const currentMonthStr = now.getFullYear() + '-' + pad(now.getMonth() + 1);
   const lastPromptMonth = localStorage.getItem('last_backup_prompt_month');
-  const hasData = Object.keys(shifts).length > 0 || Object.keys(dayNotes).length > 0;
+  const hasData = Object.keys(shifts).length > 0 || Object.keys(dayNotes).length > 0 || Object.keys(plannerTasks).length > 0;
   if (hasData && lastPromptMonth !== currentMonthStr){
     setTimeout(() => { document.getElementById('backupOverlay').classList.add('open'); }, 1000);
   }
@@ -684,32 +829,53 @@ function closeBackupReminder(){
 }
 
 function exportData(){
-  const data = { shifts, templates, dayNotes, exportDate: new Date().toISOString() };
+  const data = { version: 3, shifts, templates, dayNotes, plannerTasks, exportDate: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'backup-smeny.json';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // Не отзывать Blob URL в тот же момент: на iOS/Telegram загрузка может стартовать позже.
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 function importData(event){
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      if (!data.shifts || !data.templates) { alert('Неверный формат файла'); return; }
-      if (confirm('Вы уверены? Текущие данные будут заменены данными из файла.')) {
-        shifts = data.shifts; templates = data.templates; dayNotes = data.dayNotes || {};
-        Storage.set(STORE_KEY, JSON.stringify(shifts));
-        Storage.set(TEMPLATES_KEY, JSON.stringify(templates));
-        Storage.set(DAY_NOTES_KEY, JSON.stringify(dayNotes));
-        alert('Данные успешно восстановлены!');
-        renderTemplates(); renderCalendar(); renderSalaryPage();
+      if (!data.shifts || typeof data.shifts !== 'object') { alert('Неверный формат файла'); return; }
+      if (!confirm('Вы уверены? Текущие данные будут заменены данными из файла.')) return;
+      // Поддерживаем и полные бэкапы Telegram-версии, и формат первой программы.
+      if (Array.isArray(data.templates)) {
+        shifts = data.shifts; templates = data.templates; dayNotes = data.dayNotes || {}; plannerTasks = data.plannerTasks || {};
+      } else {
+        const names = [...new Set(Object.values(data.shifts).flat().map(x => x.shop).filter(Boolean))];
+        templates = names.map((name, i) => ({ id: 'import_' + i, name, color: COLORS[i % COLORS.length], defaultHours: null, archived: false }));
+        const byName = new Map(templates.map(x => [x.name, x]));
+        shifts = {};
+        for (const [date, items] of Object.entries(data.shifts)) {
+          shifts[date] = (Array.isArray(items) ? items : []).map(item => {
+            const t = byName.get(item.shop);
+            return { templateId: t?.id || 'import_extra', name: item.shop || 'Смена', color: t?.color || COLORS[0],
+              income: item.income == null ? null : Number(item.income), hours: null, note: '' };
+          });
+        }
+        dayNotes = {}; plannerTasks = {};
       }
-    } catch (err) { alert('Ошибка чтения файла.'); }
-    event.target.value = '';
+      await Promise.all([
+        Storage.set(STORE_KEY, JSON.stringify(shifts)),
+        Storage.set(TEMPLATES_KEY, JSON.stringify(templates)),
+        Storage.set(DAY_NOTES_KEY, JSON.stringify(dayNotes)),
+        Storage.set(PLANNER_KEY, JSON.stringify(plannerTasks))
+      ]);
+      alert('Данные успешно восстановлены!');
+      renderTemplates(); renderCalendar(); renderSalaryPage(); renderPlanner();
+    } catch (err) {
+      console.error(err); alert('Ошибка чтения файла или сохранения данных.');
+    } finally { event.target.value = ''; }
   };
   reader.readAsText(file);
 }
@@ -921,39 +1087,37 @@ function buildCalendarHtml(){
   const totalCells = startDow + daysInMonth;
   const trailing = (7 - (totalCells % 7)) % 7;
   const tKey = todayKey();
-  const tmKey = tomorrowKey();
   let html = '';
 
   for (let i = startDow - 1; i >= 0; i--){
     const d = prevMonthDays - i;
     const pd = new Date(y, m-1, d);
     const key = dateKey(pd.getFullYear(), pd.getMonth(), d);
-    html += buildDayCell(key, d, true, tKey, tmKey);
+    html += buildDayCell(key, d, true, tKey);
   }
   for (let d=1; d<=daysInMonth; d++){
     const key = dateKey(y,m,d);
-    html += buildDayCell(key, d, false, tKey, tmKey);
+    html += buildDayCell(key, d, false, tKey);
   }
   for (let d=1; d<=trailing; d++){
     const nd = new Date(y, m+1, d);
     const key = dateKey(nd.getFullYear(), nd.getMonth(), d);
-    html += buildDayCell(key, d, true, tKey, tmKey);
+    html += buildDayCell(key, d, true, tKey);
   }
   return html;
 }
 
-function buildDayCell(key, dayNum, otherMonth, tKey, tmKey){
+function buildDayCell(key, dayNum, otherMonth, tKey){
   const list = shifts[key] || [];
   const total = list.reduce((s,x)=>s+(+x.income||0),0);
   const dayNote = dayNotes[key] || '';
-  const hasNote = list.some(s => s.note && s.note.trim().length > 0) || dayNote.trim().length > 0;
+  const hasNote = list.some(s => s.note && s.note.trim().length > 0) || dayNote.trim().length > 0 || (plannerTasks[key] || []).length > 0;
   const isPastOrToday = key <= tKey;
   const hasMissingIncome = isPastOrToday && list.some(s => s.income === null || s.income === undefined || s.income === '');
 
   let cls = 'day';
   if (otherMonth) cls += ' other-month';
   if (key===tKey) cls += ' today';
-  if (key===tmKey) cls += ' tomorrow-highlight';
   if (list.length) cls += ' has-shift';
 
   let bg = '';
@@ -1027,6 +1191,7 @@ function renderTodayNotes(){
   let notesArr = [];
   if (dayNote.trim()) { notesArr.push(dayNote.trim()); }
   list.forEach(s => { if (s.note && s.note.trim()) { notesArr.push(`[${s.name}] ${s.note.trim()}`); } });
+  (plannerTasks[tKey] || []).slice().sort((a,b)=>a.time.localeCompare(b.time)).forEach(t=>notesArr.push(`⏰ ${t.time} ${t.title}${t.desc ? ' ('+t.desc+')' : ''}`));
   if (notesArr.length === 0) { el.innerHTML = '<span class="no-notes">Нет заметок</span>'; } 
   else { el.textContent = notesArr.join('\n'); }
 }
@@ -1239,9 +1404,55 @@ function openDay(key){
   document.getElementById('modalTitle').textContent = t.toLocaleDateString('ru-RU', { day:'numeric', month:'long', weekday:'long' });
   document.getElementById('dayNoteInput').value = dayNotes[key] || '';
   renderDayShifts();
+  renderDayPlannerTasks(key);
   renderPickList();
   document.getElementById('modalBg').classList.add('open');
 }
+
+function renderDayPlannerTasks(key){
+  const el=document.getElementById('dayPlannerBlock'); const tasks=(plannerTasks[key]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
+  if(!tasks.length){el.innerHTML='';return;}
+  el.innerHTML='<div class="card-title" style="margin-top:14px">Задачи из планера</div>'+tasks.map(t=>`<div class="day-planner-task"><b style="color:#38bdf8">${escapeHtml(t.time)}</b> — ${escapeHtml(t.title)}${t.desc?`<div style="color:#94a3b8;margin-top:3px">${escapeHtml(t.desc)}</div>`:''}</div>`).join('');
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function changePlannerDay(delta){plannerDate.setDate(plannerDate.getDate()+delta);renderPlanner();}
+function goToTodayPlanner(){plannerDate=new Date();renderPlanner();}
+function openTaskModal(taskId=null,dateKeyStr=null){
+  const idEl=document.getElementById('editingTaskId');
+  if(taskId && dateKeyStr){const t=(plannerTasks[dateKeyStr]||[]).find(x=>x.id===taskId);if(!t)return;plannerDate=new Date(dateKeyStr+'T00:00:00');document.getElementById('taskModalTitle').textContent='Редактировать задачу';document.getElementById('taskTimeInput').value=t.time;document.getElementById('taskTitleInput').value=t.title;document.getElementById('taskDescInput').value=t.desc||'';idEl.value=t.id;}
+  else {document.getElementById('taskModalTitle').textContent='Новая задача';const now=new Date();document.getElementById('taskTimeInput').value=pad(now.getHours())+':'+pad(now.getMinutes());document.getElementById('taskTitleInput').value='';document.getElementById('taskDescInput').value='';idEl.value='';}
+  document.getElementById('addTaskModal').classList.add('open');
+}
+function closeTaskModal(){document.getElementById('addTaskModal').classList.remove('open');}
+async function saveTask(){
+  const time=document.getElementById('taskTimeInput').value,title=document.getElementById('taskTitleInput').value.trim(),desc=document.getElementById('taskDescInput').value.trim(),id=document.getElementById('editingTaskId').value;
+  if(!time){alert('Укажите время');return;} if(!title){alert('Введите название задачи');return;}
+  const key=dateKey(plannerDate.getFullYear(),plannerDate.getMonth(),plannerDate.getDate());if(!plannerTasks[key])plannerTasks[key]=[];
+  if(id){const i=plannerTasks[key].findIndex(t=>t.id===id);if(i>=0)plannerTasks[key][i]={...plannerTasks[key][i],time,title,desc};}
+  else plannerTasks[key].push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),time,title,desc});
+  await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));closeTaskModal();renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);
+}
+async function deleteTask(key,id){if(!plannerTasks[key])return;plannerTasks[key]=plannerTasks[key].filter(t=>t.id!==id);if(!plannerTasks[key].length)delete plannerTasks[key];await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);}
+function renderPlanner(){
+  const key=dateKey(plannerDate.getFullYear(),plannerDate.getMonth(),plannerDate.getDate()),today=key===todayKey();
+  document.getElementById('plannerDateTitle').textContent=plannerDate.toLocaleDateString('ru-RU',{day:'numeric',month:'long',weekday:'short'});
+  const dayShifts=shifts[key]||[];
+  document.getElementById('plannerShiftsContainer').innerHTML=dayShifts.length?'<div class="planner-shifts-row">'+dayShifts.map(s=>`<div class="planner-shift-badge"><span class="dot" style="background:${s.color||'#64748b'}"></span><span>${escapeHtml(s.name)}</span>${s.hours?`<span class="time">(${s.hours} ч)</span>`:''}</div>`).join('')+'</div>':'';
+  const tasks=(plannerTasks[key]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));let html='';
+  for(let h=6;h<=23;h++){const hour=tasks.filter(t=>parseInt((t.time||'00').split(':')[0],10)===h);const cards=hour.map(t=>{
+    const desc=t.desc||'',phone=(desc.match(/(\+?\d[\d\s\-()]{8,}\d)/)||[])[0],hasAddr=/(ул\.|улица|пр\.|проспект|пер\.|переулок|д\.|дом|кв\.|квартира|офис|стр\.|строение)/i.test(desc);
+    const actions=(phone?`<a class="task-btn" href="tel:${phone.replace(/[^\d+]/g,'')}" onclick="event.stopPropagation()">Позвонить</a>`:'')+(hasAddr?`<a class="task-btn" target="_blank" href="https://yandex.ru/maps/?text=${encodeURIComponent(desc)}" onclick="event.stopPropagation()">Маршрут</a>`:'');
+    return `<div class="task-card" onclick="openTaskModal('${t.id}','${key}')"><div class="t-text">${escapeHtml(t.time)} — ${escapeHtml(t.title)}</div>${desc?`<div class="t-desc">${escapeHtml(desc)}</div>`:''}${actions?`<div class="task-action-buttons">${actions}</div>`:''}<button onclick="event.stopPropagation();deleteTask('${key}','${t.id}')" style="margin-top:7px;background:#7f1d1d;color:#fecaca;border:0;border-radius:6px;padding:4px 8px;font-size:11px">Удалить</button></div>`;
+  }).join('');html+=`<div class="time-row ${today&&h<new Date().getHours()?'past-hour':''}"><div class="time-label">${pad(h)}:00</div><div class="time-content">${cards}</div></div>`;
+  }
+  document.getElementById('plannerTimeGrid').innerHTML=html;
+}
+// Свайп влево/вправо в планере переключает день.
+(function initPlannerDaySwipe(){
+  const page=document.getElementById('page-planner');
+  page.addEventListener('touchstart',e=>{if(e.target.closest('.task-card,button,input,textarea,a'))return;plannerTouchStartX=e.changedTouches[0].screenX;plannerTouchStartY=e.changedTouches[0].screenY;},{passive:true});
+  page.addEventListener('touchend',e=>{if(e.target.closest('.task-card,button,input,textarea,a'))return;const dx=e.changedTouches[0].screenX-plannerTouchStartX,dy=e.changedTouches[0].screenY-plannerTouchStartY;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy))changePlannerDay(dx>0?-1:1);},{passive:true});
+})();
 
 function setDayNote(value){
   if (!selectedDate) return;
@@ -1315,6 +1526,28 @@ function pickTemplate(id){
   shifts[selectedDate].push({ templateId: t.id, name: t.name, color: t.color, income: null, hours: t.defaultHours || null, note: '' });
   Storage.set(STORE_KEY, JSON.stringify(shifts));
   renderDayShifts(); updateCalendarGrid(); renderTodayNotes(); renderSalaryPage();
+}
+
+// Быстрое добавление произвольной смены без предварительного создания шаблона.
+// Это сохраняет привычный сценарий первой программы: название + доход прямо в календаре.
+function quickAddShift(){
+  const nameInput = document.getElementById('quickShiftName');
+  const incomeInput = document.getElementById('quickShiftIncome');
+  const name = nameInput.value.trim();
+  if (!name){ alert('Введи название магазина или смены'); nameInput.focus(); return; }
+  let template = templates.find(t => t.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+  if (!template){
+    template = { id: 't' + Date.now(), name, color: COLORS[templates.length % COLORS.length], defaultHours: null, archived: false };
+    templates.push(template);
+    Storage.set(TEMPLATES_KEY, JSON.stringify(templates));
+  }
+  const parsedIncome = incomeInput.value.trim() === '' ? null : Number(incomeInput.value);
+  if (!shifts[selectedDate]) shifts[selectedDate] = [];
+  shifts[selectedDate].push({ templateId: template.id, name: template.name, color: template.color,
+    income: Number.isFinite(parsedIncome) ? parsedIncome : null, hours: template.defaultHours || null, note: '' });
+  Storage.set(STORE_KEY, JSON.stringify(shifts));
+  nameInput.value = ''; incomeInput.value = '';
+  renderPickList(); renderDayShifts(); updateCalendarGrid(); renderTodayNotes(); renderSalaryPage(); renderTemplates();
 }
 
 function removeShift(index){
