@@ -839,14 +839,39 @@ function closeBackupReminder(){
   document.getElementById('backupOverlay').classList.remove('open');
 }
 
-function exportData(){
+async function exportData(){
   const data={version:3,shifts,templates,dayNotes,plannerTasks,exportDate:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const fileName='Бэкап смен.json';
+
+  // В браузерах с поддержкой системного диалога сохранения можно выбрать существующий файл и заменить его.
+  if(window.showSaveFilePicker){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:fileName,
+        types:[{description:'Резервная копия смен',accept:{'application/json':['.json']}}]
+      });
+      const writable=await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      alert('Резервная копия сохранена.');
+      return;
+    }catch(err){
+      if(err&&err.name==='AbortError')return;
+      console.warn('Сохранение через системный диалог недоступно, используем загрузку файла:',err);
+    }
+  }
+
+  // Резервный вариант для Telegram/iOS: браузер скачивает файл с одним и тем же именем.
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');
-  link.href=url;link.download='backup-smeny.json';
-  document.body.appendChild(link);link.click();link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  link.href=url;
+  link.download=fileName;
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 function importData(event){
