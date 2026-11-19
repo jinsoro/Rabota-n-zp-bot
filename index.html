@@ -1444,8 +1444,16 @@ async function saveTask(){
 }
 async function deleteTask(key,id){if(!plannerTasks[key])return;plannerTasks[key]=plannerTasks[key].filter(t=>t.id!==id);if(!plannerTasks[key].length)delete plannerTasks[key];await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);}
 function extractTaskPhone(value){
-  const matches=String(value||'').match(/(?:\\+?\\d[\\d\\s().-]{7,}\\d)/g)||[];
-  for(const candidate of matches){let number=candidate.replace(/[^\\d+]/g,'');if(number.startsWith('00'))number='+'+number.slice(2);if(number.startsWith('8')&&number.length===11)number='+7'+number.slice(1);if(number.startsWith('7')&&number.length===11)number='+'+number;const digits=number.replace(/\\D/g,'');if(digits.length>=10&&digits.length<=15)return number;}
+  // Ищем телефон в тексте задачи: поддерживаются +, пробелы, скобки и дефисы.
+  const matches=String(value||'').match(/\+?\d(?:[\d\s().-]*\d)?/g)||[];
+  for(const candidate of matches){
+    let number=candidate.replace(/[^\d+]/g,'');
+    if(number.startsWith('00'))number='+'+number.slice(2);
+    if(number.startsWith('8')&&number.length===11)number='+7'+number.slice(1);
+    if(number.startsWith('7')&&number.length===11)number='+'+number;
+    const digits=number.replace(/\D/g,'');
+    if(digits.length>=10&&digits.length<=15)return number;
+  }
   return '';
 }
 function renderPlanner(){
