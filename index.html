@@ -1555,6 +1555,14 @@ function extractTaskPhone(value){
   }
   return '';
 }
+function openTaskPhone(number){
+  const phone=String(number||'').replace(/[^\\d+]/g,'');
+  if(!phone)return false;
+  // Выполняем переход к tel: синхронно внутри реального нажатия пользователя.
+  try{window.location.assign('tel:'+phone);}
+  catch(e){try{window.open('tel:'+phone,'_self');}catch(_e){}}
+  return false;
+}
 function openTaskRoute(address){
   const query=String(address||'').trim();
   if(!query)return;
@@ -1581,8 +1589,8 @@ function renderPlanner(){
     const collision=prepared.some(y=>y!==x&&x.start<y.end&&y.start<x.end);
     const compact=collision||(x.duration>0&&x.duration<60);
     const height=Math.max(48,Math.min(x.effectiveDuration,1440-x.start));
-    const phoneAction=x.phone?'<a class="task-icon-btn task-phone-link" href="tel:'+escapeHtml(x.phone)+'" aria-label="Позвонить" title="Позвонить" ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.57 3.58a1 1 0 0 1-.24 1.02z"/></svg></a>':'';
-    const phoneNumber=x.phone?'<a class="task-phone-number" href="tel:'+escapeHtml(x.phone)+'"  aria-label="Позвонить по номеру '+escapeHtml(x.phone)+'">'+escapeHtml(x.phone)+'</a>':'';
+    const phoneAction=x.phone?'<a class="task-icon-btn task-phone-link" href="tel:'+escapeHtml(x.phone)+'" onclick="event.preventDefault();event.stopPropagation();return openTaskPhone(\\''+escapeHtml(x.phone)+'\\')" aria-label="Позвонить" title="Позвонить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.57 3.58a1 1 0 0 1-.24 1.02z"/></svg></a>':'';
+    const phoneNumber=x.phone?'<a class="task-phone-number" href="tel:'+escapeHtml(x.phone)+'" onclick="event.preventDefault();event.stopPropagation();return openTaskPhone(\\''+escapeHtml(x.phone)+'\\')" aria-label="Позвонить по номеру '+escapeHtml(x.phone)+'">'+escapeHtml(x.phone)+'</a>':'';
     const routeAction=x.address?'<button type="button" class="task-icon-btn task-route-link" aria-label="Маршрут" title="Маршрут" onclick="event.stopPropagation();openTaskRoute(\''+escapeHtml(x.address).replace(/'/g,"&#39;")+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></button>':'';
     const durationLabel=x.duration?(x.duration%60?Math.floor(x.duration/60)+' ч '+(x.duration%60)+' мин':x.duration/60+' ч'):'';
     const content='<div class="task-compact-main"><span class="task-compact-time">'+escapeHtml(x.t.time)+'</span><span class="task-compact-title">'+escapeHtml(x.title)+'</span>'+(durationLabel?'<span class="task-duration-note">'+escapeHtml(durationLabel)+'</span>':'')+'</div><div class="task-compact-actions">'+phoneAction+routeAction+'</div>';
