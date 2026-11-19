@@ -926,8 +926,10 @@ function importData(event){
       if(!data||!data.shifts||typeof data.shifts!=='object'||Array.isArray(data.shifts)){
         alert('Это не резервная копия приложения: в файле не найдены данные смен. Текущие данные не изменены.');return;
       }
-      const entries=Object.entries(data.shifts).filter(([date,items])=>/^\\d{4}-\\d{2}-\\d{2}$/.test(date)&&Array.isArray(items));
-      if(Object.keys(data.shifts).length&&!entries.length){
+      const shiftsSource=data.shifts&&typeof data.shifts==='object'&&!Array.isArray(data.shifts)?data.shifts:(data.calendar&&data.calendar.shifts&&typeof data.calendar.shifts==='object'?data.calendar.shifts:null);
+      if(!shiftsSource){alert('В резервной копии не найден календарь смен. Текущие данные не изменены.');return;}
+      const entries=Object.entries(shiftsSource).filter(([date,items])=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&Array.isArray(items));
+      if(Object.keys(shiftsSource).length&&!entries.length){
         alert('Формат смен в файле не распознан. Текущие данные не изменены.');return;
       }
       if(!confirm('Вы уверены? Текущие данные будут заменены данными из файла.'))return;
@@ -941,8 +943,8 @@ function importData(event){
           income:item.income==null?null:(Number.isFinite(Number(item.income))?Number(item.income):null),
           hours:item.hours==null?null:(Number.isFinite(Number(item.hours))?Number(item.hours):null),note:String(item.note||'')
         }))]));
-        nextDayNotes=data.dayNotes&&typeof data.dayNotes==='object'&&!Array.isArray(data.dayNotes)?data.dayNotes:{};
-        nextPlannerTasks=data.plannerTasks&&typeof data.plannerTasks==='object'&&!Array.isArray(data.plannerTasks)?data.plannerTasks:{};
+        nextDayNotes=data.dayNotes&&typeof data.dayNotes==='object'&&!Array.isArray(data.dayNotes)?data.dayNotes:(data.calendar&&data.calendar.dayNotes&&typeof data.calendar.dayNotes==='object'?data.calendar.dayNotes:{});
+        nextPlannerTasks=data.plannerTasks&&typeof data.plannerTasks==='object'&&!Array.isArray(data.plannerTasks)?data.plannerTasks:(data.planner&&data.planner.tasks&&typeof data.planner.tasks==='object'?data.planner.tasks:{});
       }else{
         const names=[...new Set(entries.flatMap(([,items])=>items.map(x=>x&&(x.shop||x.name||x.store)).filter(Boolean).map(String)))];
         nextTemplates=names.map((name,i)=>({id:'import_'+i,name,color:COLORS[i%COLORS.length],defaultHours:null,archived:false}));
