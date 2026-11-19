@@ -1556,11 +1556,18 @@ function extractTaskPhone(value){
   return '';
 }
 function openTaskPhone(number){
-  const phone=String(number||'').replace(/[^\d+]/g,'');
+  const phone=String(number||'').replace(/[^\\d+]/g,'');
   if(!phone)return false;
-  // Выполняем переход к tel: синхронно внутри реального нажатия пользователя.
-  try{window.location.assign('tel:'+phone);}
-  catch(e){try{window.open('tel:'+phone,'_self');}catch(_e){}}
+  const url='tel:'+phone;
+  // В Telegram WebApp передаём системную схему через штатный API открытия ссылок.
+  try{
+    if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openLink==='function'){
+      window.Telegram.WebApp.openLink(url);
+      return false;
+    }
+  }catch(e){}
+  // Резервный путь для запуска Mini App вне Telegram.
+  try{window.location.href=url;}catch(e){}
   return false;
 }
 function openTaskRoute(address){
