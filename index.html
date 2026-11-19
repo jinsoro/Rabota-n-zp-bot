@@ -293,7 +293,8 @@
   .time-content{flex:1;height:60px;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;gap:6px;background:#0f172a;min-width:0;overflow:visible}
   .time-row.past-hour .time-label{color:#334155}.time-row.past-hour .time-content{opacity:.55}
   .task-card{background:#1e3a8a;border-left:3px solid #38bdf8;border-radius:6px;padding:8px 10px;cursor:pointer;overflow-wrap:anywhere;box-sizing:border-box}
-  .task-swipe-container.has-duration{z-index:20}.task-swipe-container.has-duration .task-swipe-content,.task-swipe-container.has-duration .task-card{height:100%;box-sizing:border-box}
+  .task-swipe-container.has-duration{z-index:20;flex:0 0 auto;min-height:0}.task-swipe-container.has-duration .task-swipe-content,.task-swipe-container.has-duration .task-card{height:100%;min-height:100%;box-sizing:border-box}
+  .task-duration-select{appearance:none;-webkit-appearance:none;background:#334155 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") no-repeat right 12px center;background-size:16px;padding-right:38px;border:1px solid #475569;border-radius:9px;color:#f8fafc;min-height:42px;width:100%;font-weight:600}
   .task-card .t-text{font-size:13px;font-weight:600;color:#e5e7eb;line-height:1.3}
   .task-card .t-desc{font-size:11px;color:#bfdbfe;margin-top:3px;line-height:1.3;white-space:pre-wrap}
   .task-action-buttons{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
@@ -399,7 +400,7 @@
 <div class="add-task-modal" id="addTaskModal"><div class="inner">
   <h2 id="taskModalTitle">Новая задача</h2>
   <div class="task-form-group"><label>Время</label><input type="time" id="taskTimeInput" value="09:00"></div>
-  <div class="task-form-group"><label>Длительность (необязательно)</label><select id="taskDurationInput"><option value="0">Не указывать</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="45">45 минут</option><option value="60">1 час</option><option value="90">1 час 30 минут</option><option value="120">2 часа</option><option value="150">2 часа 30 минут</option><option value="180">3 часа</option><option value="240">4 часа</option></select></div>
+  <div class="task-form-group"><label>◷ Длительность</label><select id="taskDurationInput" class="task-duration-select"><option value="0">Не указывать</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="45">45 минут</option><option value="60">1 час</option><option value="90">1 час 30 минут</option><option value="120">2 часа</option><option value="150">2 часа 30 минут</option><option value="180">3 часа</option><option value="240">4 часа</option></select></div>
   <div class="task-form-group"><label>Что нужно сделать?</label><input type="text" id="taskTitleInput" placeholder="Встреча, заказ, звонок"></div>
   <div class="task-form-group"><label>Адрес (необязательно)</label><input type="text" id="taskAddressInput" placeholder="Улица, дом, город" autocomplete="street-address"><div class="field-hint">Если адрес заполнен, кнопка «Маршрут» появится автоматически</div></div>
   <div class="task-form-group"><label>Телефон (необязательно)</label><input type="tel" id="taskPhoneInput" placeholder="+7 900 123-45-67" inputmode="tel" autocomplete="tel"></div>
@@ -1513,7 +1514,7 @@ function openTaskModal(taskId=null,dateKeyStr=null){
 function closeTaskModal(){document.getElementById('addTaskModal').classList.remove('open');}
 async function saveTask(){
   const time=document.getElementById('taskTimeInput').value,duration=Math.max(0,Number(document.getElementById('taskDurationInput').value)||0),title=document.getElementById('taskTitleInput').value.trim(),phone=document.getElementById('taskPhoneInput').value.trim(),desc=document.getElementById('taskDescInput').value.trim(),address=document.getElementById('taskAddressInput').value.trim(),id=document.getElementById('editingTaskId').value;
-  if(!time){alert('Укажите время');return;} if(!title){alert('Введите название задачи');return;}
+  if(!time){alert('Укажите время');return;} if(!title&&!phone&&!address&&!desc){alert('Укажите название, телефон, адрес или комментарий');return;}
   const key=dateKey(plannerDate.getFullYear(),plannerDate.getMonth(),plannerDate.getDate());if(!plannerTasks[key])plannerTasks[key]=[];
   if(id){const i=plannerTasks[key].findIndex(t=>t.id===id);if(i>=0)plannerTasks[key][i]={...plannerTasks[key][i],time,duration,title,phone,desc,address};}
   else plannerTasks[key].push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),time,duration,title,phone,desc,address});
@@ -1561,11 +1562,11 @@ function renderPlanner(){
   const tasks=(plannerTasks[key]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));let html='';
   for(let h=6;h<=23;h++){
     const cards=tasks.filter(t=>parseInt((t.time||'00').split(':')[0],10)===h).map(t=>{
-      const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(t.phone||desc+' '+(t.title||'')+' '+address),duration=Math.max(0,Number(t.duration)||0),durationLabel=duration?(duration%60?Math.floor(duration/60)+' ч '+(duration%60)+' мин':duration/60+' ч'):'';
+      const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(t.phone||desc+' '+(t.title||'')+' '+address),duration=Math.max(0,Number(t.duration)||0),durationLabel=duration?(duration%60?Math.floor(duration/60)+' ч '+(duration%60)+' мин':duration/60+' ч'):'',displayTitle=t.title||phone||address||desc||'Задача';
       const legacyAddress=/(улица|ул\.?|проспект|пр-т|пр\.?|переулок|пер\.?|дом|д\.?|корпус|строение|стр\.?|квартира|кв\.?|офис|набережная|шоссе|бульвар|площадь)/i.test(desc)?desc:'';
       const routeAddress=address||legacyAddress;
       const actions=(phone?'<a class="task-btn task-call-btn" href="tel:'+escapeHtml(phone)+'" data-phone="'+escapeHtml(phone)+'" target="_blank" rel="noopener">Позвонить</a>':'')+(routeAddress?'<button type="button" class="task-btn" data-address="'+escapeHtml(routeAddress)+'" onclick="event.preventDefault();event.stopPropagation();openTaskRoute(this.dataset.address)">Маршрут</button>':'');
-      return '<div class="task-swipe-container'+(duration?' has-duration':'')+'" '+(duration?'style="height:'+Math.max(46,duration)+'px"':'')+' data-key="'+key+'" data-id="'+t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)"><div class="t-text">'+escapeHtml(t.time)+' — '+escapeHtml(t.title)+(durationLabel?' · '+escapeHtml(durationLabel):'')+'</div>'+(address?'<div class="t-desc">📍 '+escapeHtml(address)+'</div>':'')+(desc?'<div class="t-desc">'+escapeHtml(desc)+'</div>':'')+(actions?'<div class="task-action-buttons">'+actions+'</div>':'')+'</div></div></div>';
+      return '<div class="task-swipe-container'+(duration?' has-duration':'')+'" '+(duration?'style="height:'+Math.max(46,duration)+'px"':'')+' data-key="'+key+'" data-id="'+t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)"><div class="t-text">'+escapeHtml(t.time)+' — '+escapeHtml(displayTitle)+(durationLabel?' · '+escapeHtml(durationLabel):'')+'</div>'+(address?'<div class="t-desc">📍 '+escapeHtml(address)+'</div>':'')+(desc?'<div class="t-desc">'+escapeHtml(desc)+'</div>':'')+(actions?'<div class="task-action-buttons">'+actions+'</div>':'')+'</div></div></div>';
     }).join('');
     html+='<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'" style="z-index:'+(30-h)+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cards+'</div></div>';
   }
