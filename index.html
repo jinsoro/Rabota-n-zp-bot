@@ -840,82 +840,63 @@ function closeBackupReminder(){
 }
 
 function exportData(){
-  const data = { version: 3, shifts, templates, dayNotes, plannerTasks, exportDate: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'backup-smeny.json';
-  document.body.appenfunction importData(event){
-  const input=event.target;
-  const file=input.files&&input.files[0];
+  const data={version:3,shifts,templates,dayNotes,plannerTasks,exportDate:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download='backup-smeny.json';
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+
+function importData(event){
+  const input=event.target,file=input.files&&input.files[0];
   if(!file)return;
   const reader=new FileReader();
   reader.onerror=()=>{alert('Не удалось прочитать файл. Попробуйте выбрать резервную копию ещё раз.');input.value='';};
   reader.onload=async function(e){
     try{
       const parsed=JSON.parse(String(e.target.result||''));
-      // Поддержка резервных копий приложения и файлов, в которых данные лежат внутри объекта backup/data.
       const data=parsed&&typeof parsed==='object'?(parsed.backup&&typeof parsed.backup==='object'?parsed.backup:(parsed.data&&typeof parsed.data==='object'?parsed.data:parsed)):null;
       if(!data||!data.shifts||typeof data.shifts!=='object'||Array.isArray(data.shifts)){
-        alert('Это не резервная копия приложения: в файле не найдены данные смен. Текущие данные не изменены.');
-        return;
+        alert('Это не резервная копия приложения: в файле не найдены данные смен. Текущие данные не изменены.');return;
       }
-      const sourceShifts=data.shifts;
-      const validEntries=Object.entries(sourceShifts).filter(([date,items])=>/^\\d{4}-\\d{2}-\\d{2}$/.test(date)&&Array.isArray(items));
-      if(Object.keys(sourceShifts).length&&!validEntries.length){
-        alert('В файле найдены смены, но их формат не распознан. Текущие данные не изменены.');
-        return;
+      const entries=Object.entries(data.shifts).filter(([date,items])=>/^\\d{4}-\\d{2}-\\d{2}$/.test(date)&&Array.isArray(items));
+      if(Object.keys(data.shifts).length&&!entries.length){
+        alert('Формат смен в файле не распознан. Текущие данные не изменены.');return;
       }
       if(!confirm('Вы уверены? Текущие данные будут заменены данными из файла.'))return;
-
       let nextShifts={},nextTemplates=[],nextDayNotes={},nextPlannerTasks={};
       if(Array.isArray(data.templates)){
-        nextTemplates=data.templates.filter(t=>t&&typeof t==='object'&&t.name).map((t,i)=>({
-          id:String(t.id||('import_'+i)),name:String(t.name),color:t.color||COLORS[i%COLORS.length],
-          defaultHours:t.defaultHours??null,archived:!!t.archived
-        }));
-        nextShifts=Object.fromEntries(validEntries.map(([date,items])=>[date,items.map((item,i)=>({
-          ...item,
-          templateId:String(item.templateId||nextTemplates.find(t=>t.name===item.name)?.id||'import_extra'),
+        nextTemplates=data.templates.filter(t=>t&&typeof t==='object'&&t.name).map((t,i)=>({id:String(t.id||('import_'+i)),name:String(t.name),color:t.color||COLORS[i%COLORS.length],defaultHours:t.defaultHours??null,archived:!!t.archived}));
+        nextShifts=Object.fromEntries(entries.map(([date,items])=>[date,items.map(item=>({
+          ...item,templateId:String(item.templateId||nextTemplates.find(t=>t.name===item.name)?.id||'import_extra'),
           name:String(item.name||item.shop||'Смена'),
           color:item.color||nextTemplates.find(t=>t.id===item.templateId||t.name===item.name)?.color||COLORS[0],
           income:item.income==null?null:(Number.isFinite(Number(item.income))?Number(item.income):null),
-          hours:item.hours==null?null:(Number.isFinite(Number(item.hours))?Number(item.hours):null),
-          note:String(item.note||'')
+          hours:item.hours==null?null:(Number.isFinite(Number(item.hours))?Number(item.hours):null),note:String(item.note||'')
         }))]));
         nextDayNotes=data.dayNotes&&typeof data.dayNotes==='object'&&!Array.isArray(data.dayNotes)?data.dayNotes:{};
         nextPlannerTasks=data.plannerTasks&&typeof data.plannerTasks==='object'&&!Array.isArray(data.plannerTasks)?data.plannerTasks:{};
       }else{
-        // Старый формат: в сменах вместо name использовалось поле shop.
-        const names=[...new Set(validEntries.flatMap(([,items])=>items.map(x=>x&&(x.shop||x.name||x.store)).filter(Boolean).map(String)))];
+        const names=[...new Set(entries.flatMap(([,items])=>items.map(x=>x&&(x.shop||x.name||x.store)).filter(Boolean).map(String)))];
         nextTemplates=names.map((name,i)=>({id:'import_'+i,name,color:COLORS[i%COLORS.length],defaultHours:null,archived:false}));
         const byName=new Map(nextTemplates.map(t=>[t.name,t]));
-        nextShifts=Object.fromEntries(validEntries.map(([date,items])=>[date,items.map(item=>{
+        nextShifts=Object.fromEntries(entries.map(([date,items])=>[date,items.map(item=>{
           const name=String(item.shop||item.name||item.store||'Смена'),t=byName.get(name);
-          return {templateId:t?t.id:'import_extra',name,color:item.color||t?.color||COLORS[0],
-            income:item.income==null?null:(Number.isFinite(Number(item.income))?Number(item.income):null),
-            hours:item.hours==null?null:(Number.isFinite(Number(item.hours))?Number(item.hours):null),note:String(item.note||'')};
+          return {templateId:t?t.id:'import_extra',name,color:item.color||t?.color||COLORS[0],income:item.income==null?null:(Number.isFinite(Number(item.income))?Number(item.income):null),hours:item.hours==null?null:(Number.isFinite(Number(item.hours))?Number(item.hours):null),note:String(item.note||'')};
         })]));
         nextDayNotes=data.dayNotes&&typeof data.dayNotes==='object'?data.dayNotes:{};
         nextPlannerTasks=data.plannerTasks&&typeof data.plannerTasks==='object'?data.plannerTasks:{};
       }
-
-      // Сначала обновляем состояние приложения, затем сохраняем все разделы в локальное и облачное хранилище.
       shifts=nextShifts;templates=nextTemplates;dayNotes=nextDayNotes;plannerTasks=nextPlannerTasks;
-      await Promise.all([
-        Storage.set(STORE_KEY,JSON.stringify(shifts)),
-        Storage.set(TEMPLATES_KEY,JSON.stringify(templates)),
-        Storage.set(DAY_NOTES_KEY,JSON.stringify(dayNotes)),
-        Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks))
-      ]);
+      await Promise.all([Storage.set(STORE_KEY,JSON.stringify(shifts)),Storage.set(TEMPLATES_KEY,JSON.stringify(templates)),Storage.set(DAY_NOTES_KEY,JSON.stringify(dayNotes)),Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks))]);
       renderTemplates();renderCalendar();renderSalaryPage();renderPlanner();renderTodayNotes();
       alert('Данные успешно восстановлены!');
     }catch(err){
       console.error('Ошибка импорта резервной копии:',err);
       alert('Не удалось импортировать файл. Проверьте, что это целая JSON-копия приложения.');
-    }finally{
-      input.value='';
-    }
+    }finally{input.value='';}
   };
   reader.readAsText(file);
 }
