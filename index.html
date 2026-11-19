@@ -287,12 +287,13 @@
   .planner-shift-badge .dot{width:8px;height:8px;border-radius:50%}
   .planner-shift-badge .time{color:#94a3b8;font-size:11px}
   .time-grid-card{padding:0;overflow:hidden}
-  .time-row{display:flex;border-bottom:1px solid #334155;min-height:60px}
+  .time-row{position:relative;z-index:1;display:flex;flex:0 0 60px;height:60px;min-height:60px;box-sizing:border-box;border-bottom:1px solid #334155;overflow:visible}
   .time-row:last-child{border-bottom:0}
   .time-label{width:60px;flex-shrink:0;padding:12px 0 0 12px;font-size:12px;font-weight:600;color:#64748b;border-right:1px solid #334155;background:#1e293b}
-  .time-content{flex:1;padding:8px;display:flex;flex-direction:column;gap:6px;background:#0f172a;min-width:0}
+  .time-content{flex:1;height:60px;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;gap:6px;background:#0f172a;min-width:0;overflow:visible}
   .time-row.past-hour .time-label{color:#334155}.time-row.past-hour .time-content{opacity:.55}
-  .task-card{background:#1e3a8a;border-left:3px solid #38bdf8;border-radius:6px;padding:8px 10px;cursor:pointer;overflow-wrap:anywhere}
+  .task-card{background:#1e3a8a;border-left:3px solid #38bdf8;border-radius:6px;padding:8px 10px;cursor:pointer;overflow-wrap:anywhere;box-sizing:border-box}
+  .task-swipe-container.has-duration{z-index:20}.task-swipe-container.has-duration .task-swipe-content,.task-swipe-container.has-duration .task-card{height:100%;box-sizing:border-box}
   .task-card .t-text{font-size:13px;font-weight:600;color:#e5e7eb;line-height:1.3}
   .task-card .t-desc{font-size:11px;color:#bfdbfe;margin-top:3px;line-height:1.3;white-space:pre-wrap}
   .task-action-buttons{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
@@ -398,6 +399,7 @@
 <div class="add-task-modal" id="addTaskModal"><div class="inner">
   <h2 id="taskModalTitle">Новая задача</h2>
   <div class="task-form-group"><label>Время</label><input type="time" id="taskTimeInput" value="09:00"></div>
+  <div class="task-form-group"><label>Длительность (необязательно)</label><select id="taskDurationInput"><option value="0">Не указывать</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="45">45 минут</option><option value="60">1 час</option><option value="90">1 час 30 минут</option><option value="120">2 часа</option><option value="150">2 часа 30 минут</option><option value="180">3 часа</option><option value="240">4 часа</option></select></div>
   <div class="task-form-group"><label>Что нужно сделать?</label><input type="text" id="taskTitleInput" placeholder="Встреча, заказ, звонок"></div>
   <div class="task-form-group"><label>Адрес (необязательно)</label><input type="text" id="taskAddressInput" placeholder="Улица, дом, город" autocomplete="street-address"><div class="field-hint">Если адрес заполнен, кнопка «Маршрут» появится автоматически</div></div>
   <div class="task-form-group"><label>Телефон (необязательно)</label><input type="tel" id="taskPhoneInput" placeholder="+7 900 123-45-67" inputmode="tel" autocomplete="tel"></div>
@@ -1504,17 +1506,17 @@ function selectPlannerDate(value){if(!value)return;plannerDate=new Date(value+'T
 function addPlannerTaskForSelectedDate(){if(!selectedDate)return;plannerDate=new Date(selectedDate+'T00:00:00');closeModal();switchTab('planner');openTaskModal();}
 function openTaskModal(taskId=null,dateKeyStr=null){
   const idEl=document.getElementById('editingTaskId');
-  if(taskId && dateKeyStr){const t=(plannerTasks[dateKeyStr]||[]).find(x=>x.id===taskId);if(!t)return;plannerDate=new Date(dateKeyStr+'T00:00:00');document.getElementById('taskModalTitle').textContent='Редактировать задачу';document.getElementById('taskTimeInput').value=t.time;document.getElementById('taskTitleInput').value=t.title;document.getElementById('taskPhoneInput').value=t.phone||extractTaskPhone(t.desc||'');document.getElementById('taskDescInput').value=t.desc||'';document.getElementById('taskAddressInput').value=t.address||'';idEl.value=t.id;}
-  else {document.getElementById('taskModalTitle').textContent='Новая задача';const now=new Date();document.getElementById('taskTimeInput').value=pad(now.getHours())+':'+pad(now.getMinutes());document.getElementById('taskTitleInput').value='';document.getElementById('taskPhoneInput').value='';document.getElementById('taskDescInput').value='';document.getElementById('taskAddressInput').value='';idEl.value='';}
+  if(taskId && dateKeyStr){const t=(plannerTasks[dateKeyStr]||[]).find(x=>x.id===taskId);if(!t)return;plannerDate=new Date(dateKeyStr+'T00:00:00');document.getElementById('taskModalTitle').textContent='Редактировать задачу';document.getElementById('taskTimeInput').value=t.time;document.getElementById('taskDurationInput').value=String(Number(t.duration)||0);document.getElementById('taskTitleInput').value=t.title;document.getElementById('taskPhoneInput').value=t.phone||extractTaskPhone(t.desc||'');document.getElementById('taskDescInput').value=t.desc||'';document.getElementById('taskAddressInput').value=t.address||'';idEl.value=t.id;}
+  else {document.getElementById('taskModalTitle').textContent='Новая задача';const now=new Date();document.getElementById('taskTimeInput').value=pad(now.getHours())+':'+pad(now.getMinutes());document.getElementById('taskDurationInput').value='0';document.getElementById('taskTitleInput').value='';document.getElementById('taskPhoneInput').value='';document.getElementById('taskDescInput').value='';document.getElementById('taskAddressInput').value='';idEl.value='';}
   document.getElementById('addTaskModal').classList.add('open');
 }
 function closeTaskModal(){document.getElementById('addTaskModal').classList.remove('open');}
 async function saveTask(){
-  const time=document.getElementById('taskTimeInput').value,title=document.getElementById('taskTitleInput').value.trim(),phone=document.getElementById('taskPhoneInput').value.trim(),desc=document.getElementById('taskDescInput').value.trim(),address=document.getElementById('taskAddressInput').value.trim(),id=document.getElementById('editingTaskId').value;
+  const time=document.getElementById('taskTimeInput').value,duration=Math.max(0,Number(document.getElementById('taskDurationInput').value)||0),title=document.getElementById('taskTitleInput').value.trim(),phone=document.getElementById('taskPhoneInput').value.trim(),desc=document.getElementById('taskDescInput').value.trim(),address=document.getElementById('taskAddressInput').value.trim(),id=document.getElementById('editingTaskId').value;
   if(!time){alert('Укажите время');return;} if(!title){alert('Введите название задачи');return;}
   const key=dateKey(plannerDate.getFullYear(),plannerDate.getMonth(),plannerDate.getDate());if(!plannerTasks[key])plannerTasks[key]=[];
-  if(id){const i=plannerTasks[key].findIndex(t=>t.id===id);if(i>=0)plannerTasks[key][i]={...plannerTasks[key][i],time,title,phone,desc,address};}
-  else plannerTasks[key].push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),time,title,phone,desc,address});
+  if(id){const i=plannerTasks[key].findIndex(t=>t.id===id);if(i>=0)plannerTasks[key][i]={...plannerTasks[key][i],time,duration,title,phone,desc,address};}
+  else plannerTasks[key].push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),time,duration,title,phone,desc,address});
   await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));closeTaskModal();renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);
 }
 async function deleteTask(key,id){if(!plannerTasks[key])return;plannerTasks[key]=plannerTasks[key].filter(t=>t.id!==id);if(!plannerTasks[key].length)delete plannerTasks[key];await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);}
@@ -1559,13 +1561,13 @@ function renderPlanner(){
   const tasks=(plannerTasks[key]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));let html='';
   for(let h=6;h<=23;h++){
     const cards=tasks.filter(t=>parseInt((t.time||'00').split(':')[0],10)===h).map(t=>{
-      const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(t.phone||desc+' '+(t.title||'')+' '+address);
+      const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(t.phone||desc+' '+(t.title||'')+' '+address),duration=Math.max(0,Number(t.duration)||0),durationLabel=duration?(duration%60?Math.floor(duration/60)+' ч '+(duration%60)+' мин':duration/60+' ч'):'';
       const legacyAddress=/(улица|ул\.?|проспект|пр-т|пр\.?|переулок|пер\.?|дом|д\.?|корпус|строение|стр\.?|квартира|кв\.?|офис|набережная|шоссе|бульвар|площадь)/i.test(desc)?desc:'';
       const routeAddress=address||legacyAddress;
       const actions=(phone?'<a class="task-btn task-call-btn" href="tel:'+escapeHtml(phone)+'" data-phone="'+escapeHtml(phone)+'" target="_blank" rel="noopener">Позвонить</a>':'')+(routeAddress?'<button type="button" class="task-btn" data-address="'+escapeHtml(routeAddress)+'" onclick="event.preventDefault();event.stopPropagation();openTaskRoute(this.dataset.address)">Маршрут</button>':'');
-      return '<div class="task-swipe-container" data-key="'+key+'" data-id="'+t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)"><div class="t-text">'+escapeHtml(t.time)+' — '+escapeHtml(t.title)+'</div>'+(address?'<div class="t-desc">📍 '+escapeHtml(address)+'</div>':'')+(desc?'<div class="t-desc">'+escapeHtml(desc)+'</div>':'')+(actions?'<div class="task-action-buttons">'+actions+'</div>':'')+'</div></div></div>';
+      return '<div class="task-swipe-container'+(duration?' has-duration':'')+'" '+(duration?'style="height:'+Math.max(46,duration)+'px"':'')+' data-key="'+key+'" data-id="'+t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)"><div class="t-text">'+escapeHtml(t.time)+' — '+escapeHtml(t.title)+(durationLabel?' · '+escapeHtml(durationLabel):'')+'</div>'+(address?'<div class="t-desc">📍 '+escapeHtml(address)+'</div>':'')+(desc?'<div class="t-desc">'+escapeHtml(desc)+'</div>':'')+(actions?'<div class="task-action-buttons">'+actions+'</div>':'')+'</div></div></div>';
     }).join('');
-    html+='<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cards+'</div></div>';
+    html+='<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'" style="z-index:'+(30-h)+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cards+'</div></div>';
   }
   document.getElementById('plannerTimeGrid').innerHTML=html;initPlannerTaskSwipe();
 }
