@@ -1444,17 +1444,32 @@ async function saveTask(){
 }
 async function deleteTask(key,id){if(!plannerTasks[key])return;plannerTasks[key]=plannerTasks[key].filter(t=>t.id!==id);if(!plannerTasks[key].length)delete plannerTasks[key];await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);}
 function extractTaskPhone(value){
-  // Ищем телефон в тексте задачи: поддерживаются +, пробелы, скобки и дефисы.
-  const matches=String(value||'').match(/\+?\d(?:[\d\s().-]*\d)?/g)||[];
+  // Ищем телефон отдельной последовательностью, не захватывая соседний текст.
+  const matches=String(value||'').match(/\+?\d[\d\s().-]{7,}\d/g)||[];
   for(const candidate of matches){
-    let number=candidate.replace(/[^\d+]/g,'');
+    let number=candidate.trim().replace(/[^\d+]/g,'');
     if(number.startsWith('00'))number='+'+number.slice(2);
-    if(number.startsWith('8')&&number.length===11)number='+7'+number.slice(1);
-    if(number.startsWith('7')&&number.length===11)number='+'+number;
     const digits=number.replace(/\D/g,'');
-    if(digits.length>=10&&digits.length<=15)return number;
+    if(digits.length<10||digits.length>15)continue;
+    if(number.startsWith('8')&&digits.length===11)number='+7'+digits.slice(1);
+    else if(number.startsWith('7')&&digits.length===11)number='+'+digits;
+    else if(!number.startsWith('+'))number='+'+digits;
+    return number;
   }
   return '';
+}
+function openTaskPhone(number){
+  const phone=String(number||'').replace(/[^\d+]/g,'');
+  if(!phone)return;
+  // Используем tel: напрямую — это надёжнее для мобильного WebView Telegram.
+  window.location.href='tel:'+phone;
+}
+function openTaskRoute(address){
+  const query=String(address||'').trim();
+  if(!query)return;
+  const url='https://yandex.ru/maps/?rtext=~'+encodeURIComponent(query);
+  if(tg&&typeof tg.openLink==='function'){tg.openLink(url);return;}
+  window.open(url,'_blank','noopener');
 }
 function renderPlanner(){
   const key=dateKey(plannerDate.getFullYear(),plannerDate.getMonth(),plannerDate.getDate()),today=key===todayKey();
@@ -1465,9 +1480,9 @@ function renderPlanner(){
   for(let h=6;h<=23;h++){
     const cards=tasks.filter(t=>parseInt((t.time||'00').split(':')[0],10)===h).map(t=>{
       const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(desc+' '+(t.title||'')+' '+address);
-      const legacyAddress=/(ул\\.|улица|пр\\.|проспект|пер\\.|переулок|д\\.|дом|кв\\.|квартира|офис|стр\\.|строение)/i.test(desc)?desc:'';
+      const legacyAddress=/(улица|ул\\.?|проспект|пр-т|пр\\.?|переулок|пер\\.?|дом|д\\.?|корпус|строение|стр\\.?|квартира|кв\\.?|офис|набережная|шоссе|бульвар|площадь)/i.test(desc)?desc:'';
       const routeAddress=address||legacyAddress;
-      const actions=(phone?'<a class="task-btn" href="tel:'+escapeHtml(phone)+'" onclick="event.stopPropagation()">Позвонить</a>':'')+(routeAddress?'<a class="task-btn" target="_blank" rel="noopener" href="https://yandex.ru/maps/?rtext=~'+encodeURIComponent(routeAddress)+'" onclick="event.stopPropagation()">Маршрут</a>':'');
+      const actions=(phone?'<button type="button" class="task-btn" onclick="event.preventDefault();event.stopPropagation();openTaskPhone(\\''+escapeHtml(phone)+'\\')">Позвонить</button>':'')+(routeAddress?'<button type="button" class="task-btn" onclick="event.preventDefault();event.stopPropagation();openTaskRoute(\\''+escapeHtml(routeAddress).replace(/\\'/g,'&#39;')+'\\')">Маршрут</button>':'');
       return '<div class="task-swipe-container" data-key="'+key+'" data-id="'+t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)"><div class="t-text">'+escapeHtml(t.time)+' — '+escapeHtml(t.title)+'</div>'+(address?'<div class="t-desc">📍 '+escapeHtml(address)+'</div>':'')+(desc?'<div class="t-desc">'+escapeHtml(desc)+'</div>':'')+(actions?'<div class="task-action-buttons">'+actions+'</div>':'')+'</div></div></div>';
     }).join('');
     html+='<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cards+'</div></div>';
