@@ -22,7 +22,7 @@
     -webkit-font-smoothing: antialiased;
     
     /* ЖЕСТКИЙ ОТСТУП СВЕРХУ: опускает контент под кнопку "Закрыть" и остров камеры */
-    padding-top: 75px; 
+    padding-top: 81px; 
     /* ЖЕСТКИЙ ОТСТУП СНИЗУ: защита от полоски "Домой" */
     padding-bottom: 20px;
   }
@@ -1489,7 +1489,7 @@ function renderPlanner(){
       const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(t.phone||desc+' '+(t.title||'')+' '+address);
       const legacyAddress=/(улица|ул\.?|проспект|пр-т|пр\.?|переулок|пер\.?|дом|д\.?|корпус|строение|стр\.?|квартира|кв\.?|офис|набережная|шоссе|бульвар|площадь)/i.test(desc)?desc:'';
       const routeAddress=address||legacyAddress;
-      const actions=(phone?'<a class="task-btn task-call-btn" href="tel:'+escapeHtml(phone)+'" onclick="event.stopPropagation()">Позвонить</a>':'')+(routeAddress?'<button type="button" class="task-btn" data-address="'+escapeHtml(routeAddress)+'" onclick="event.preventDefault();event.stopPropagation();openTaskRoute(this.dataset.address)">Маршрут</button>':'');
+      const actions=(phone?'<a class="task-btn task-call-btn" href="tel:'+escapeHtml(phone)+'" data-phone="'+escapeHtml(phone)+'" role="button" onclick="event.preventDefault();event.stopPropagation();window.location.href=this.getAttribute(\'href\');return false;">Позвонить</a>':'')+(routeAddress?'<button type="button" class="task-btn" data-address="'+escapeHtml(routeAddress)+'" onclick="event.preventDefault();event.stopPropagation();openTaskRoute(this.dataset.address)">Маршрут</button>':'');
       return '<div class="task-swipe-container" data-key="'+key+'" data-id="'+t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)"><div class="t-text">'+escapeHtml(t.time)+' — '+escapeHtml(t.title)+'</div>'+(address?'<div class="t-desc">📍 '+escapeHtml(address)+'</div>':'')+(desc?'<div class="t-desc">'+escapeHtml(desc)+'</div>':'')+(actions?'<div class="task-action-buttons">'+actions+'</div>':'')+'</div></div></div>';
     }).join('');
     html+='<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cards+'</div></div>';
