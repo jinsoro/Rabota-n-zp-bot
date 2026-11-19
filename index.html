@@ -841,10 +841,26 @@ function closeBackupReminder(){
 
 async function exportData(){
   const data={version:3,shifts,templates,dayNotes,plannerTasks,exportDate:new Date().toISOString()};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const json=JSON.stringify(data,null,2);
   const fileName='Бэкап смен.json';
+  const blob=new Blob([json],{type:'application/json'});
+  const backupFile=new File([blob],fileName,{type:'application/json',lastModified:Date.now()});
 
-  // В браузерах с поддержкой системного диалога сохранения можно выбрать существующий файл и заменить его.
+  // На iPhone в Telegram WebView обычная загрузка Blob-ссылки может открыть JSON как текст.
+  // Передаём настоящий файл в системное меню «Поделиться» — оттуда его можно сохранить в «Файлы».
+  if(navigator.share&&navigator.canShare){
+    try{
+      if(navigator.canShare({files:[backupFile]})){
+        await navigator.share({files:[backupFile],title:'Резервная копия смен'});
+        return;
+      }
+    }catch(err){
+      if(err&&err.name==='AbortError')return;
+      console.warn('Не удалось открыть системное меню отправки файла:',err);
+    }
+  }
+
+  // В браузерах с File System Access API предлагаем сохранить или заменить существующий файл.
   if(window.showSaveFilePicker){
     try{
       const handle=await window.showSaveFilePicker({
@@ -858,11 +874,11 @@ async function exportData(){
       return;
     }catch(err){
       if(err&&err.name==='AbortError')return;
-      console.warn('Сохранение через системный диалог недоступно, используем загрузку файла:',err);
+      console.warn('Системный диалог сохранения недоступен:',err);
     }
   }
 
-  // Резервный вариант для Telegram/iOS: браузер скачивает файл с одним и тем же именем.
+  // Последний резервный вариант для браузеров без системного меню отправки файлов.
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');
   link.href=url;
