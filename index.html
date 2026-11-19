@@ -1550,7 +1550,13 @@ function extractTaskPhone(value){
   }
   return '';
 }
-function openTaskPhone(number){\n  const phone=String(number||'').replace(/[^\\d+]/g,'');\n  if(!phone)return;\n  const url='tel:'+phone;\n  // Используем прямой системный URL; при ограничениях Telegram показываем номер для ручного набора.\n  try{window.location.href=url;}catch(e){}\n  setTimeout(()=>{if(document.visibilityState==='visible')alert('Номер телефона: '+phone+'\\nЕсли звонок не открылся, скопируйте номер и наберите его вручную.');},700);\n}
+function openTaskPhone(number){
+  const phone=String(number||'').replace(/[^\d+]/g,'');
+  if(!phone)return;
+  const url='tel:'+phone;
+  try{window.location.href=url;}catch(e){}
+  setTimeout(()=>{if(document.visibilityState==='visible')alert('Номер телефона: '+phone+'\nЕсли звонок не открылся, наберите номер вручную.');},700);
+}
 function openTaskRoute(address){
   const query=String(address||'').trim();
   if(!query)return;
