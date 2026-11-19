@@ -1553,8 +1553,9 @@ function extractTaskPhone(value){
 function openTaskPhone(number){
   const phone=String(number||'').replace(/[^\\d+]/g,'');
   if(!phone)return;
-  // Запускаем системный телефон непосредственно из обработчика нажатия.
-  window.location.href='tel:'+phone;
+  const url='tel:'+phone;
+  // Прямой переход и резервное открытие системной ссылки в WebView.
+  try{window.location.assign(url);}catch(e){try{window.open(url,'_self');}catch(_){}}
 }
 function openTaskRoute(address){
   const query=String(address||'').trim();
@@ -1572,7 +1573,7 @@ function renderPlanner(){
   const prepared=tasks.map(t=>{
     const p=(t.time||'00:00').split(':').map(Number),start=(p[0]||0)*60+(p[1]||0),duration=Math.max(0,Number(t.duration)||0),effectiveDuration=duration||60;
     const phone=extractTaskPhone(t.phone||((t.desc||'')+' '+(t.title||'')+' '+(t.address||'')));
-    const address=t.address||(/(улица|ул\\.?|проспект|пр-т|пр\\.?|переулок|пер\\.?|дом|д\\.?|корпус|строение|стр\\.?|квартира|кв\\.?|офис|набережная|шоссе|бульвар|площадь)/i.test(t.desc||'')?(t.desc||''):'');
+    const address=String(t.address||'').trim() || (/(улица|ул\\.?|проспект|пр-т|пр\\.?|переулок|пер\\.?|дом|д\\.?|корпус|строение|стр\\.?|квартира|кв\\.?|офис|набережная|шоссе|бульвар|площадь|\\d{1,4}\\s*[а-яa-z]?\\s*[,])/i.test((t.desc||'')+' '+(t.title||''))?String(t.desc||t.title||'').trim():'');
     return {t,start,end:start+effectiveDuration,duration,effectiveDuration,phone,address,title:t.title||phone||address||t.desc||'Задача'};
   });
   const html=[];
@@ -1585,15 +1586,20 @@ function renderPlanner(){
       // а длинная карточка визуально проходит через следующие часы.
       const height=Math.max(48,x.effectiveDuration);
       const top=(x.start-h*60)+4;
-      const phoneAction=x.phone?'<button type="button" class="task-icon-btn" aria-label="Позвонить" title="Позвонить" data-phone="'+escapeHtml(x.phone)+'" onclick="event.stopPropagation();openTaskPhone(this.dataset.phone)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.57 3.58a1 1 0 0 1-.24 1.02z"/></svg></button>':'';
-      const routeAction=x.address?'<button type="button" class="task-icon-btn" aria-label="Маршрут" title="Маршрут" onclick="event.stopPropagation();openTaskRoute(this.dataset.address)" data-address="'+escapeHtml(x.address)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0-5z"/></svg></button>':'';
+      const phoneAction=x.phone?'<a class="task-icon-btn task-phone-link" href="tel:'+escapeHtml(x.phone)+'" aria-label="Позвонить" title="Позвонить" onclick="event.stopPropagation()" ontouchend="event.stopPropagation()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.57 3.58a1 1 0 0 1-.24 1.02z"/></svg></a>':'';
+      const routeAction=x.address?'<a class="task-icon-btn task-route-link" href="https://yandex.ru/maps/?text='+encodeURIComponent(x.address)+'&z=16" target="_blank" rel="noopener" aria-label="Маршрут" title="Маршрут" onclick="event.stopPropagation()" ontouchend="event.stopPropagation()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0-5z"/></svg></a>':'';
       const durationLabel=x.duration?(x.duration%60?Math.floor(x.duration/60)+' ч '+(x.duration%60)+' мин':x.duration/60+' ч'):'';
       const content='<div class="task-compact-main"><span class="task-compact-time">'+escapeHtml(x.t.time)+'</span><span class="task-compact-title">'+escapeHtml(x.title)+'</span>'+(durationLabel?'<span class="task-duration-note">'+escapeHtml(durationLabel)+'</span>':'')+'</div><div class="task-compact-actions">'+phoneAction+routeAction+'</div>';
-      return '<div class="task-swipe-container '+(compact?'task-compact':'task-standard')+'" style="top:'+top+'px;height:'+height+'px;z-index:'+(100-Math.round(x.start/10))+'" data-key="'+key+'" data-id="'+x.t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card" onclick="openTaskModal(this.parentElement.parentElement.dataset.id,this.parentElement.parentElement.dataset.key)">'+content+'</div></div></div>';
+      return '<div class="task-swipe-container '+(compact?'task-compact':'task-standard')+'" style="top:'+top+'px;height:'+height+'px;z-index:'+(100-Math.round(x.start/10))+'" data-key="'+key+'" data-id="'+x.t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card">'+content+'</div></div></div>';
     }).join('');
     html.push('<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'" style="z-index:'+(30-h)+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cardHtml+'</div></div>');
   }
-  document.getElementById('plannerTimeGrid').innerHTML=html.join('');initPlannerTaskSwipe();
+  document.getElementById('plannerTimeGrid').innerHTML=html.join('');
+  document.querySelectorAll('#plannerTimeGrid .task-card').forEach(card=>card.addEventListener('click',e=>{
+    if(e.target.closest('.task-icon-btn'))return;
+    const wrap=card.closest('.task-swipe-container');if(wrap)openTaskModal(wrap.dataset.id,wrap.dataset.key);
+  }));
+  initPlannerTaskSwipe();
 }
 function initPlannerTaskSwipe(){
   document.querySelectorAll('#plannerTimeGrid .task-swipe-container').forEach(container=>{
