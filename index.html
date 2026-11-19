@@ -1556,18 +1556,24 @@ function extractTaskPhone(value){
   return '';
 }
 function openTaskPhone(number){
-  const phone=String(number||'').replace(/[^\\d+]/g,'');
+  const phone=String(number||'').replace(/[^\d+]/g,'');
   if(!phone)return false;
   const url='tel:'+phone;
-  // В Telegram WebApp передаём системную схему через штатный API открытия ссылок.
+  // Для tel: используем нативное открытие схемы через окно WebView.
+  // Telegram.WebApp.openLink предназначен для HTTPS-ссылок и здесь не подходит.
   try{
-    if(window.Telegram&&window.Telegram.WebApp&&typeof window.Telegram.WebApp.openLink==='function'){
-      window.Telegram.WebApp.openLink(url);
-      return false;
-    }
+    const opened=window.open(url,'_blank');
+    if(opened)return false;
   }catch(e){}
-  // Резервный путь для запуска Mini App вне Telegram.
-  try{window.location.href=url;}catch(e){}
+  // Запасной вариант для WebView, который не возвращает объект окна.
+  try{
+    const link=document.createElement('a');
+    link.href=url;
+    link.style.display='none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }catch(e){}
   return false;
 }
 function openTaskRoute(address){
