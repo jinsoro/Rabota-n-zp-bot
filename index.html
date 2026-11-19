@@ -1547,8 +1547,7 @@ function openTaskPhone(number){
 function openTaskRoute(address){
   const query=String(address||'').trim();
   if(!query)return;
-  const params=new URLSearchParams({api:'1',destination:query,travelmode:'driving'});
-  const url='https://www.google.com/maps/dir/?'+params.toString();
+  const url='https://yandex.ru/maps/?rtext=~'+encodeURIComponent(query)+'&rtt=auto';
   if(tg&&typeof tg.openLink==='function'){tg.openLink(url);return;}
   window.open(url,'_blank','noopener');
 }
