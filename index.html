@@ -400,7 +400,8 @@
   <div class="task-form-group"><label>Время</label><input type="time" id="taskTimeInput" value="09:00"></div>
   <div class="task-form-group"><label>Что нужно сделать?</label><input type="text" id="taskTitleInput" placeholder="Встреча, заказ, звонок"></div>
   <div class="task-form-group"><label>Адрес (необязательно)</label><input type="text" id="taskAddressInput" placeholder="Улица, дом, город" autocomplete="street-address"><div class="field-hint">Если адрес заполнен, кнопка «Маршрут» появится автоматически</div></div>
-  <div class="task-form-group"><label>Телефон и комментарий (необязательно)</label><textarea id="taskDescInput" placeholder="Телефон, имя контакта, дополнительные детали..."></textarea></div>
+  <div class="task-form-group"><label>Телефон (необязательно)</label><input type="tel" id="taskPhoneInput" placeholder="+7 900 123-45-67" inputmode="tel" autocomplete="tel"></div>
+  <div class="task-form-group"><label>Комментарий (необязательно)</label><textarea id="taskDescInput" placeholder="Имя контакта и дополнительные детали..."></textarea></div>
   <input type="hidden" id="editingTaskId" value="">
   <button class="btn btn-primary" onclick="saveTask()" style="background:#22c55e;color:#052e16;margin-bottom:8px">Сохранить</button>
   <button class="btn btn-cancel" onclick="closeTaskModal()">Отмена</button>
@@ -1430,17 +1431,17 @@ function selectPlannerDate(value){if(!value)return;plannerDate=new Date(value+'T
 function addPlannerTaskForSelectedDate(){if(!selectedDate)return;plannerDate=new Date(selectedDate+'T00:00:00');closeModal();switchTab('planner');openTaskModal();}
 function openTaskModal(taskId=null,dateKeyStr=null){
   const idEl=document.getElementById('editingTaskId');
-  if(taskId && dateKeyStr){const t=(plannerTasks[dateKeyStr]||[]).find(x=>x.id===taskId);if(!t)return;plannerDate=new Date(dateKeyStr+'T00:00:00');document.getElementById('taskModalTitle').textContent='Редактировать задачу';document.getElementById('taskTimeInput').value=t.time;document.getElementById('taskTitleInput').value=t.title;document.getElementById('taskDescInput').value=t.desc||'';document.getElementById('taskAddressInput').value=t.address||'';idEl.value=t.id;}
-  else {document.getElementById('taskModalTitle').textContent='Новая задача';const now=new Date();document.getElementById('taskTimeInput').value=pad(now.getHours())+':'+pad(now.getMinutes());document.getElementById('taskTitleInput').value='';document.getElementById('taskDescInput').value='';document.getElementById('taskAddressInput').value='';idEl.value='';}
+  if(taskId && dateKeyStr){const t=(plannerTasks[dateKeyStr]||[]).find(x=>x.id===taskId);if(!t)return;plannerDate=new Date(dateKeyStr+'T00:00:00');document.getElementById('taskModalTitle').textContent='Редактировать задачу';document.getElementById('taskTimeInput').value=t.time;document.getElementById('taskTitleInput').value=t.title;document.getElementById('taskPhoneInput').value=t.phone||extractTaskPhone(t.desc||'');document.getElementById('taskDescInput').value=t.desc||'';document.getElementById('taskAddressInput').value=t.address||'';idEl.value=t.id;}
+  else {document.getElementById('taskModalTitle').textContent='Новая задача';const now=new Date();document.getElementById('taskTimeInput').value=pad(now.getHours())+':'+pad(now.getMinutes());document.getElementById('taskTitleInput').value='';document.getElementById('taskPhoneInput').value='';document.getElementById('taskDescInput').value='';document.getElementById('taskAddressInput').value='';idEl.value='';}
   document.getElementById('addTaskModal').classList.add('open');
 }
 function closeTaskModal(){document.getElementById('addTaskModal').classList.remove('open');}
 async function saveTask(){
-  const time=document.getElementById('taskTimeInput').value,title=document.getElementById('taskTitleInput').value.trim(),desc=document.getElementById('taskDescInput').value.trim(),address=document.getElementById('taskAddressInput').value.trim(),id=document.getElementById('editingTaskId').value;
+  const time=document.getElementById('taskTimeInput').value,title=document.getElementById('taskTitleInput').value.trim(),phone=document.getElementById('taskPhoneInput').value.trim(),desc=document.getElementById('taskDescInput').value.trim(),address=document.getElementById('taskAddressInput').value.trim(),id=document.getElementById('editingTaskId').value;
   if(!time){alert('Укажите время');return;} if(!title){alert('Введите название задачи');return;}
   const key=dateKey(plannerDate.getFullYear(),plannerDate.getMonth(),plannerDate.getDate());if(!plannerTasks[key])plannerTasks[key]=[];
-  if(id){const i=plannerTasks[key].findIndex(t=>t.id===id);if(i>=0)plannerTasks[key][i]={...plannerTasks[key][i],time,title,desc,address};}
-  else plannerTasks[key].push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),time,title,desc,address});
+  if(id){const i=plannerTasks[key].findIndex(t=>t.id===id);if(i>=0)plannerTasks[key][i]={...plannerTasks[key][i],time,title,phone,desc,address};}
+  else plannerTasks[key].push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),time,title,phone,desc,address});
   await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));closeTaskModal();renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);
 }
 async function deleteTask(key,id){if(!plannerTasks[key])return;plannerTasks[key]=plannerTasks[key].filter(t=>t.id!==id);if(!plannerTasks[key].length)delete plannerTasks[key];await Storage.set(PLANNER_KEY,JSON.stringify(plannerTasks));renderPlanner();updateCalendarGrid();renderTodayNotes();if(selectedDate===key)renderDayPlannerTasks(key);}
@@ -1485,7 +1486,7 @@ function renderPlanner(){
   const tasks=(plannerTasks[key]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));let html='';
   for(let h=6;h<=23;h++){
     const cards=tasks.filter(t=>parseInt((t.time||'00').split(':')[0],10)===h).map(t=>{
-      const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(desc+' '+(t.title||'')+' '+address);
+      const desc=t.desc||'',address=t.address||'',phone=extractTaskPhone(t.phone||desc+' '+(t.title||'')+' '+address);
       const legacyAddress=/(улица|ул\.?|проспект|пр-т|пр\.?|переулок|пер\.?|дом|д\.?|корпус|строение|стр\.?|квартира|кв\.?|офис|набережная|шоссе|бульвар|площадь)/i.test(desc)?desc:'';
       const routeAddress=address||legacyAddress;
       const actions=(phone?'<a class="task-btn" href="tel:'+escapeHtml(phone)+'" onclick="event.stopPropagation()" ontouchend="event.stopPropagation()">Позвонить</a>':'')+(routeAddress?'<button type="button" class="task-btn" data-address="'+escapeHtml(routeAddress)+'" onclick="event.preventDefault();event.stopPropagation();openTaskRoute(this.dataset.address)">Маршрут</button>':'');
