@@ -286,15 +286,15 @@
   .planner-shift-badge{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;font-size:12px}
   .planner-shift-badge .dot{width:8px;height:8px;border-radius:50%}
   .planner-shift-badge .time{color:#94a3b8;font-size:11px}
-  .time-grid-card{padding:0;overflow:visible;position:relative}
-  #plannerTimeGrid{position:relative;min-height:1440px}
-  .planner-hour-rows{position:relative;z-index:1}
-  .planner-task-layer{position:absolute;left:60px;right:0;top:0;height:1440px;z-index:5;pointer-events:none}
+  .time-grid-card{padding:0!important;overflow:visible!important;position:relative!important}
+  #plannerTimeGrid{position:relative!important;display:block!important;width:100%;height:1440px!important;min-height:1440px!important;overflow:visible!important;background-color:#0f172a;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#334155 59px,#334155 60px)}
+  .planner-hour-rows{position:relative;z-index:1;display:block!important;width:100%;height:1440px!important;min-height:1440px!important}
+  .planner-task-layer{position:absolute!important;left:60px;right:0;top:0;height:1440px;z-index:5;pointer-events:none}
   .planner-task-layer .task-swipe-container{pointer-events:auto}
-  .time-row{position:relative;z-index:auto;display:flex;flex:0 0 60px;height:60px;min-height:60px;box-sizing:border-box;border-bottom:1px solid #334155;overflow:visible}
+  .time-row{position:relative;z-index:auto;display:flex!important;flex-direction:row;flex-wrap:nowrap;width:100%;height:60px!important;min-height:60px!important;max-height:60px;box-sizing:border-box;border:0!important;overflow:visible;background:transparent!important}
   .time-row:last-child{border-bottom:0}
-  .time-label{width:60px;flex-shrink:0;padding:12px 0 0 12px;font-size:12px;font-weight:600;color:#64748b;border-right:1px solid #334155;background:#1e293b}
-  .time-content{position:relative;flex:1;height:60px;min-height:60px;box-sizing:border-box;padding:0;display:block;background:#0f172a;min-width:0;overflow:visible}
+  .time-label{width:60px;min-width:60px;max-width:60px;flex:0 0 60px;padding:12px 0 0 12px;font-size:12px;font-weight:600;color:#64748b;border-right:1px solid #334155;background:#1e293b}
+  .time-content{position:relative;flex:1 1 auto;width:calc(100% - 60px);height:60px!important;min-height:60px!important;box-sizing:border-box;padding:0;display:block;background:transparent!important;min-width:0;overflow:visible}
   .time-row.past-hour .time-label{color:#334155}.time-row.past-hour .time-content{opacity:.55}
   .task-card{background:#1e3a8a;border-left:3px solid #38bdf8;border-radius:6px;padding:8px 10px;cursor:pointer;overflow-wrap:anywhere;box-sizing:border-box}
   .task-swipe-container.has-duration{z-index:20;flex:0 0 auto;min-height:0;overflow:visible}.task-swipe-container.has-duration .task-swipe-content,.task-swipe-container.has-duration .task-card{height:100%;min-height:100%;box-sizing:border-box}
