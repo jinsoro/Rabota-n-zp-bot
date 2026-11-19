@@ -1558,16 +1558,14 @@ function extractTaskPhone(value){
 function openTaskPhone(number){
   const phone=String(number||'').replace(/[^\d+]/g,'');
   if(!phone)return;
-  const url='tel:'+phone;
-  let opened=false;
-  try{window.location.assign(url);opened=true;}catch(e){}
-  if(tg&&typeof tg.openLink==='function'){
-    try{tg.openLink(url);opened=true;}catch(e){}
-  }
-  setTimeout(()=>{if(document.visibilityState==='visible'){
-    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(phone).catch(()=>{});
-    alert('Telegram не открыл вызов. Номер '+phone+' скопирован — вставьте его в приложение «Телефон».');
-  }},1200);
+  // Запускаем tel: непосредственно в обработчике пользовательского нажатия.
+  try{window.location.href='tel:'+phone;}catch(e){}
+  // Если Telegram WebView заблокировал схему tel:, даём пользователю явный fallback.
+  setTimeout(()=>{
+    if(document.visibilityState==='visible'){
+      prompt('Не удалось открыть вызов в Telegram. Скопируйте номер и наберите его в приложении «Телефон»:',phone);
+    }
+  },1000);
 }
 function openTaskRoute(address){
   const query=String(address||'').trim();
