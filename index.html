@@ -839,55 +839,79 @@ function closeBackupReminder(){
   document.getElementById('backupOverlay').classList.remove('open');
 }
 
+let backupExportInProgress=false;
+
 async function exportData(){
-  const data={version:3,shifts,templates,dayNotes,plannerTasks,exportDate:new Date().toISOString()};
-  const json=JSON.stringify(data,null,2);
-  const fileName='Бэкап смен.json';
-  const blob=new Blob([json],{type:'application/json'});
-  const backupFile=new File([blob],fileName,{type:'application/json',lastModified:Date.now()});
+  if(backupExportInProgress)return;
+  backupExportInProgress=true;
+  try{
+    // Календарь и зарплата не хранятся отдельными таблицами:
+    // календарь строится из shifts/dayNotes, а зарплата — из income каждой смены.
+    // Поэтому сохраняем исходные данные целиком, а также контрольные итоги по месяцам.
+    const monthlySalary={};
+    Object.entries(shifts||{}).forEach(([date,items])=>{
+      if(!Array.isArray(items))return;
+      const month=String(date).slice(0,7);
+      monthlySalary[month]=(monthlySalary[month]||0)+items.reduce((sum,item)=>sum+(Number(item&&item.income)||0),0);
+    });
+    const data={
+      version:4,
+      app:'Rabota-n-zp-bot',
+      exportDate:new Date().toISOString(),
+      shifts:shifts||{},
+      templates:templates||[],
+      dayNotes:dayNotes||{},
+      plannerTasks:plannerTasks||{},
+      calendar:{shifts:shifts||{},dayNotes:dayNotes||{}},
+      salary:{currency:'RUB',calculation:'sum of shift.income',monthlyTotals:monthlySalary},
+      planner:{tasks:plannerTasks||{}}
+    };
+    const fileName='shift_backup.json';
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const backupFile=new File([blob],fileName,{type:'application/json',lastModified:Date.now()});
 
-  // На iPhone в Telegram WebView обычная загрузка Blob-ссылки может открыть JSON как текст.
-  // Передаём настоящий файл в системное меню «Поделиться» — оттуда его можно сохранить в «Файлы».
-  if(navigator.share&&navigator.canShare){
-    try{
-      if(navigator.canShare({files:[backupFile]})){
-        await navigator.share({files:[backupFile],title:'Резервная копия смен'});
-        return;
+    // iPhone / Telegram: отправляем ровно один файл в системное меню iOS.
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[backupFile]})){
+      try{
+        await navigator.share({files:[backupFile],title:'Shift backup'});
+      }catch(err){
+        if(err&&err.name==='AbortError')return;
+        console.error('Ошибка системной отправки резервной копии:',err);
+        alert('Не удалось передать файл в меню iPhone. Попробуйте ещё раз.');
       }
-    }catch(err){
-      if(err&&err.name==='AbortError')return;
-      console.warn('Не удалось открыть системное меню отправки файла:',err);
-    }
-  }
-
-  // В браузерах с File System Access API предлагаем сохранить или заменить существующий файл.
-  if(window.showSaveFilePicker){
-    try{
-      const handle=await window.showSaveFilePicker({
-        suggestedName:fileName,
-        types:[{description:'Резервная копия смен',accept:{'application/json':['.json']}}]
-      });
-      const writable=await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      alert('Резервная копия сохранена.');
       return;
-    }catch(err){
-      if(err&&err.name==='AbortError')return;
-      console.warn('Системный диалог сохранения недоступен:',err);
     }
-  }
 
-  // Последний резервный вариант для браузеров без системного меню отправки файлов.
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=fileName;
-  link.style.display='none';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
+    // Если системное меню файлов недоступно, используем только один способ сохранения.
+    if(window.showSaveFilePicker){
+      try{
+        const handle=await window.showSaveFilePicker({
+          suggestedName:fileName,
+          types:[{description:'Shift backup',accept:{'application/json':['.json']}}]
+        });
+        const writable=await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        alert('Backup saved.');
+        return;
+      }catch(err){
+        if(err&&err.name==='AbortError')return;
+        console.warn('Save dialog unavailable:',err);
+      }
+    }
+
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=fileName;
+    link.style.display='none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }finally{
+    backupExportInProgress=false;
+  }
 }
 
 function importData(event){
