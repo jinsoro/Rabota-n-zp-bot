@@ -286,8 +286,8 @@
   .planner-shift-badge{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;font-size:12px}
   .planner-shift-badge .dot{width:8px;height:8px;border-radius:50%}
   .planner-shift-badge .time{color:#94a3b8;font-size:11px}
-  .time-grid-card{padding:0;overflow:hidden}
-  .time-row{position:relative;z-index:1;display:flex;flex:0 0 60px;height:60px;min-height:60px;box-sizing:border-box;border-bottom:1px solid #334155;overflow:visible}
+  .time-grid-card{padding:0;overflow:visible;position:relative}\n  #plannerTimeGrid{position:relative;min-height:1440px}\n  .planner-hour-rows{position:relative;z-index:1}\n  .planner-task-layer{position:absolute;left:60px;right:0;top:0;height:1440px;z-index:5;pointer-events:none}\n  .planner-task-layer .task-swipe-container{pointer-events:auto}
+  .time-row{position:relative;z-index:auto;display:flex;flex:0 0 60px;height:60px;min-height:60px;box-sizing:border-box;border-bottom:1px solid #334155;overflow:visible}
   .time-row:last-child{border-bottom:0}
   .time-label{width:60px;flex-shrink:0;padding:12px 0 0 12px;font-size:12px;font-weight:600;color:#64748b;border-right:1px solid #334155;background:#1e293b}
   .time-content{position:relative;flex:1;height:60px;min-height:60px;box-sizing:border-box;padding:0;display:block;background:#0f172a;min-width:0;overflow:visible}
@@ -1550,13 +1550,7 @@ function extractTaskPhone(value){
   }
   return '';
 }
-function openTaskPhone(number){
-  const phone=String(number||'').replace(/[^\\d+]/g,'');
-  if(!phone)return;
-  const url='tel:'+phone;
-  // Прямой переход и резервное открытие системной ссылки в WebView.
-  try{window.location.assign(url);}catch(e){try{window.open(url,'_self');}catch(_){}}
-}
+function openTaskPhone(number){\n  const phone=String(number||'').replace(/[^\\d+]/g,'');\n  if(!phone)return;\n  const url='tel:'+phone;\n  // Используем прямой системный URL; при ограничениях Telegram показываем номер для ручного набора.\n  try{window.location.href=url;}catch(e){}\n  setTimeout(()=>{if(document.visibilityState==='visible')alert('Номер телефона: '+phone+'\\nЕсли звонок не открылся, скопируйте номер и наберите его вручную.');},700);\n}
 function openTaskRoute(address){
   const query=String(address||'').trim();
   if(!query)return;
@@ -1571,30 +1565,25 @@ function renderPlanner(){
   document.getElementById('plannerShiftsContainer').innerHTML=dayShifts.length?'<div class="planner-shifts-row">'+dayShifts.map(s=>'<div class="planner-shift-badge"><span class="dot" style="background:'+(s.color||'#64748b')+'"></span><span>'+escapeHtml(s.name)+'</span>'+(s.hours?'<span class="time">('+s.hours+' ч)</span>':'')+'</div>').join('')+'</div>':'';
   const tasks=(plannerTasks[key]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
   const prepared=tasks.map(t=>{
-    const p=(t.time||'00:00').split(':').map(Number),start=(p[0]||0)*60+(p[1]||0),duration=Math.max(0,Number(t.duration)||0),effectiveDuration=duration||60;
+    const p=(t.time||'00:00').split(':').map(Number),start=Math.max(0,Math.min(1439,(p[0]||0)*60+(p[1]||0))),duration=Math.max(0,Number(t.duration)||0),effectiveDuration=duration||60;
     const phone=extractTaskPhone(t.phone||((t.desc||'')+' '+(t.title||'')+' '+(t.address||'')));
-    const address=String(t.address||'').trim() || (/(улица|ул\\.?|проспект|пр-т|пр\\.?|переулок|пер\\.?|дом|д\\.?|корпус|строение|стр\\.?|квартира|кв\\.?|офис|набережная|шоссе|бульвар|площадь|\\d{1,4}\\s*[а-яa-z]?\\s*[,])/i.test((t.desc||'')+' '+(t.title||''))?String(t.desc||t.title||'').trim():'');
+    const sourceText=(t.desc||'')+' '+(t.title||'');
+    const address=String(t.address||'').trim() || (/(улица|ул\.?|проспект|пр-т|пр\.?|переулок|пер\.?|дом|д\.?|корпус|строение|стр\.?|квартира|кв\.?|офис|набережная|шоссе|бульвар|площадь|\d{1,4}\s*[а-яa-z]?\s*[,])/i.test(sourceText)?sourceText.trim():'');
     return {t,start,end:start+effectiveDuration,duration,effectiveDuration,phone,address,title:t.title||phone||address||t.desc||'Задача'};
   });
-  const html=[];
-  for(let h=6;h<=23;h++){
-    const cards=prepared.filter(x=>Math.floor(x.start/60)===h);
-    const cardHtml=cards.map(x=>{
-      const collision=prepared.some(y=>y!==x&&x.start<y.end&&y.start<x.end);
-      const compact=collision||(x.duration>0&&x.duration<60);
-      // Одна минута равна одному пикселю: часовая строка остаётся ровно 60 px,
-      // а длинная карточка визуально проходит через следующие часы.
-      const height=Math.max(48,x.effectiveDuration);
-      const top=(x.start-h*60)+4;
-      const phoneAction=x.phone?'<a class="task-icon-btn task-phone-link" href="tel:'+escapeHtml(x.phone)+'" aria-label="Позвонить" title="Позвонить" onclick="event.stopPropagation()" ontouchend="event.stopPropagation()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.57 3.58a1 1 0 0 1-.24 1.02z"/></svg></a>':'';
-      const routeAction=x.address?'<a class="task-icon-btn task-route-link" href="https://yandex.ru/maps/?text='+encodeURIComponent(x.address)+'&z=16" target="_blank" rel="noopener" aria-label="Маршрут" title="Маршрут" onclick="event.stopPropagation()" ontouchend="event.stopPropagation()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0-5z"/></svg></a>':'';
-      const durationLabel=x.duration?(x.duration%60?Math.floor(x.duration/60)+' ч '+(x.duration%60)+' мин':x.duration/60+' ч'):'';
-      const content='<div class="task-compact-main"><span class="task-compact-time">'+escapeHtml(x.t.time)+'</span><span class="task-compact-title">'+escapeHtml(x.title)+'</span>'+(durationLabel?'<span class="task-duration-note">'+escapeHtml(durationLabel)+'</span>':'')+'</div><div class="task-compact-actions">'+phoneAction+routeAction+'</div>';
-      return '<div class="task-swipe-container '+(compact?'task-compact':'task-standard')+'" style="top:'+top+'px;height:'+height+'px;z-index:'+(100-Math.round(x.start/10))+'" data-key="'+key+'" data-id="'+x.t.id+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card">'+content+'</div></div></div>';
-    }).join('');
-    html.push('<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'" style="z-index:'+(30-h)+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content">'+cardHtml+'</div></div>');
-  }
-  document.getElementById('plannerTimeGrid').innerHTML=html.join('');
+  const rows=[];
+  for(let h=0;h<24;h++) rows.push('<div class="time-row '+(today&&h<new Date().getHours()?'past-hour':'')+'"><div class="time-label">'+pad(h)+':00</div><div class="time-content"></div></div>');
+  const cards=prepared.map(x=>{
+    const collision=prepared.some(y=>y!==x&&x.start<y.end&&y.start<x.end);
+    const compact=collision||(x.duration>0&&x.duration<60);
+    const height=Math.max(48,Math.min(x.effectiveDuration,1440-x.start));
+    const phoneAction=x.phone?'<button type="button" class="task-icon-btn task-phone-link" aria-label="Позвонить" title="Позвонить" onclick="event.stopPropagation();openTaskPhone(\''+escapeHtml(x.phone)+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.57 3.58a1 1 0 0 1-.24 1.02z"/></svg></button>':'';
+    const routeAction=x.address?'<button type="button" class="task-icon-btn task-route-link" aria-label="Маршрут" title="Маршрут" onclick="event.stopPropagation();openTaskRoute(\''+escapeHtml(x.address).replace(/'/g,"&#39;")+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></button>':'';
+    const durationLabel=x.duration?(x.duration%60?Math.floor(x.duration/60)+' ч '+(x.duration%60)+' мин':x.duration/60+' ч'):'';
+    const content='<div class="task-compact-main"><span class="task-compact-time">'+escapeHtml(x.t.time)+'</span><span class="task-compact-title">'+escapeHtml(x.title)+'</span>'+(durationLabel?'<span class="task-duration-note">'+escapeHtml(durationLabel)+'</span>':'')+'</div><div class="task-compact-actions">'+phoneAction+routeAction+'</div>';
+    return '<div class="task-swipe-container '+(compact?'task-compact':'task-standard')+'" style="top:'+x.start+'px;height:'+height+'px;z-index:'+(100+Math.round(x.start/10))+'" data-key="'+key+'" data-id="'+escapeHtml(x.t.id)+'"><button type="button" class="task-swipe-action" onclick="event.stopPropagation();deleteTask(this.parentElement.dataset.key,this.parentElement.dataset.id)">Удалить</button><div class="task-swipe-content"><div class="task-card">'+content+'</div></div></div>';
+  }).join('');
+  document.getElementById('plannerTimeGrid').innerHTML='<div class="planner-hour-rows">'+rows.join('')+'</div><div class="planner-task-layer">'+cards+'</div>';
   document.querySelectorAll('#plannerTimeGrid .task-card').forEach(card=>card.addEventListener('click',e=>{
     if(e.target.closest('.task-icon-btn'))return;
     const wrap=card.closest('.task-swipe-container');if(wrap)openTaskModal(wrap.dataset.id,wrap.dataset.key);
